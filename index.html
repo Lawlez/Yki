@@ -117,6 +117,9 @@
             <button id="add-sample-order-btn" class="btn-primary text-white font-semibold py-3 px-8 rounded-full shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-300">
                 Add Sample Order
             </button>
+            <button id="add-order-to-stock-btn" class="btn-primary text-white font-semibold py-3 px-8 rounded-full shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-300">
+                Add Current Order to Stock
+            </button>
         </div>
 
         <div id="results" class="bg-indigo-50 p-4 rounded-lg shadow-inner border border-indigo-200 hidden results-section">
@@ -174,9 +177,9 @@
             { id: "wild_komplett", name: "Canis Plus® Wild Komplett-Menü", price: 6.55, category: "standard_food", sub_category: "wet_food_can", daily_portion_amount: 0.5, daily_portion_unit: "can", daily_portion_display: "0.5 pcs/day", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "can" },
             { id: "seelachs_komplett", name: "Canis Plus® Seelachs Komplett-Menü", price: 7.25, category: "standard_food", sub_category: "wet_food_can", daily_portion_amount: 0.5, daily_portion_unit: "can", daily_portion_display: "0.5 pcs/day", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "can" },
 
-            // Standard Food - Pellets 
+            // Standard Food - Pellets (assuming 1kg bag = 1000g)
             { id: "lamm_pellets", name: "Canis Plus® Lamm - kleinere Pellets", price: 38.70, category: "standard_food", sub_category: "pellets", daily_portion_amount: 40, daily_portion_unit: "g", daily_portion_display: "40g/day", stock_unit: "kg", pack_size_amount: 5000, pack_size_unit: "g" },
-            { id: "lachs_pellets", name: "Canis Plus® Lachs - kleinere Pellets", price: 42.20, category: "standard_food", sub_category: "pellets", daily_portion_amount: 40, daily_portion_unit: "g", daily_portion_display: "40g/day", stock_unit: "kg", pack_size_amount: 5000, pack_size_unit: "g" },
+            { id: "lachs_pellets", name: "Canis Plus® Lachs - kleinere Pellets", price: 38.70, category: "standard_food", sub_category: "pellets", daily_portion_amount: 40, daily_portion_unit: "g", daily_portion_display: "40g/day", stock_unit: "kg", pack_size_amount: 5000, pack_size_unit: "g" },
 
             // Long-Term Products (Additives/Oils) - Daily consumption or fixed duration
             // For additives with fixed duration, daily_portion_amount is 1 unit / (duration_months * 30.44 days)
@@ -243,7 +246,7 @@
         const STOCK_STORAGE_KEY = 'yukiFoodStock';
         const DAILY_WET_FOOD_CONSUMPTION_CANS = 0.5;
         const DAILY_PELLET_CONSUMPTION_GRAMS = 40;
-        const DAILY_OTHER_TREATS_CONSUMPTION_GRAMS = 30;
+        const DAILY_OTHER_TREATS_CONSUMPTION_GRAMS = 20;
 
         // Function to group items by category
         function groupItemsByCategory(items) {
@@ -405,7 +408,7 @@
                 let daysRemainingForItem = 0;
                 if (item.daily_portion_amount > 0) {
                     daysRemainingForItem = totalAvailableConsumptionUnits / item.daily_portion_amount;
-                } else if (item.id === "hirschgeweih") {
+                } else if (item.id === "hirschgeweih") { // Special handling for Hirschgeweih duration
                     daysRemainingForItem = totalAvailableConsumptionUnits * 30;
                 }
 
@@ -484,7 +487,16 @@
             const detailedBreakdownBody = document.getElementById('detailed-breakdown-body');
             detailedBreakdownBody.innerHTML = '';
 
-            detailedBreakdownData.sort((a, b) => a.daysRemaining - b.daysRemaining).forEach(item => {
+            // Custom sort function: non-zero days remaining first (ascending), then zero days remaining at the bottom
+            detailedBreakdownData.sort((a, b) => {
+                if (a.daysRemaining === 0 && b.daysRemaining !== 0) {
+                    return 1; // a (0) goes after b (non-0)
+                }
+                if (a.daysRemaining !== 0 && b.daysRemaining === 0) {
+                    return -1; // a (non-0) goes before b (0)
+                }
+                return a.daysRemaining - b.daysRemaining; // Sort by days remaining ascending for non-zeros
+            }).forEach(item => {
                 const row = detailedBreakdownBody.insertRow();
                 if (item.daysRemaining > 0 && item.daysRemaining < 14) {
                     row.classList.add('low-stock');
@@ -525,13 +537,58 @@
             calculateOrder();
         }
 
+        // Function to add current order to stock and clear order fields
+        function addOrderToStock() {
+            foodItems.forEach(item => {
+                const orderQuantityInput = document.getElementById(item.id);
+                const orderQuantity = parseFloat(orderQuantityInput.value) || 0;
+
+                if (orderQuantity > 0) {
+                    const stockInput = document.getElementById(item.id + '_stock');
+                    if (stockInput) {
+                        let currentStock = parseFloat(stockInput.value) || 0;
+                        let newStock = currentStock + orderQuantity;
+
+                        // Apply reverse unit conversion if necessary for stock input display
+                        // Note: For Fischhaut-Stangen, orderQuantity is in 'pcs' (bags), stock is in 'pcs' (sticks).
+                        // So, if orderQuantity is 1 bag, it adds 5 sticks to stock.
+                        if (item.stock_unit === 'kg' && item.pack_size_unit === 'g') {
+                            newStock = currentStock + (orderQuantity * item.pack_size_amount / 1000); // Add kg equivalent
+                        } else if (item.id === 'fischhaut_stangen') { // Specific handling for Fischhaut-Stangen
+                            newStock = currentStock + (orderQuantity * item.pack_size_amount); // Add individual sticks
+                        } else if (item.stock_unit === 'pcs' && item.pack_size_unit === 'can') { // For wet food cans
+                            newStock = currentStock + orderQuantity; // Add cans directly
+                        } else if (item.stock_unit === 'pcs' && item.pack_size_unit === 'unit') { // For general units like Hirschgeweih, InsectVetal
+                            newStock = currentStock + orderQuantity; // Add units directly
+                        } else if (item.stock_unit === 'g' && item.pack_size_unit === 'g') { // For gram-based additives/treats
+                             newStock = currentStock + (orderQuantity * item.pack_size_amount); // Add grams directly
+                        } else if (item.stock_unit === 'ml' && item.pack_size_unit === 'ml') { // For ml-based oils/liquids
+                            newStock = currentStock + (orderQuantity * item.pack_size_amount); // Add ml directly
+                        }
+
+
+                        stockInput.value = newStock.toFixed(2); // Keep consistent decimal places
+                    }
+                }
+                // Clear the order input field
+                orderQuantityInput.value = 0;
+            });
+
+            // Save the updated stock
+            saveStockToLocalStorage();
+            // Recalculate and update the UI without reloading
+            calculateOrder();
+        }
+
+
         window.onload = function() {
             renderStockItems();
             renderFoodItems();
             loadStockFromLocalStorage();
 
             document.getElementById('calculate-btn').addEventListener('click', calculateOrder);
-            document.getElementById('add-sample-order-btn').addEventListener('click', addSampleOrder); // New button event listener
+            document.getElementById('add-sample-order-btn').addEventListener('click', addSampleOrder);
+            document.getElementById('add-order-to-stock-btn').addEventListener('click', addOrderToStock);
 
             stockInputMap.forEach(stockItem => {
                 const inputElement = document.getElementById(stockItem.id);
@@ -557,7 +614,13 @@
                     svg.classList.remove('rotate-90');
                     svg.classList.add('rotate-0');
                 } else {
-                    detailedSection.style.maxHeight = detailedSection.scrollHeight + 'px';
+                    // Temporarily set to 'auto' to get full scrollHeight, then animate
+                    detailedSection.style.maxHeight = 'auto';
+                    const height = detailedSection.scrollHeight;
+                    detailedSection.style.maxHeight = '0px'; // Reset to 0 before animating
+                    // Force reflow
+                    detailedSection.offsetWidth; // Trigger reflow
+                    detailedSection.style.maxHeight = height + 'px';
                     svg.classList.remove('rotate-0');
                     svg.classList.add('rotate-90');
                 }
