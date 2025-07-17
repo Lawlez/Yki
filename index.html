@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yuki's Food Ordering Planner</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        .container {
+            max-width: 960px;
+            margin: 1rem auto;
+            padding: 1rem;
+            background-color: #ffffff;
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .input-group input[type="number"] {
+            -moz-appearance: textfield; /* Firefox */
+        }
+        .input-group input[type="number"]::-webkit-outer-spin-button,
+        .input-group input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .btn-primary {
+            background-image: linear-gradient(to right, #6366f1, #8b5cf6);
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-primary:hover {
+            background-image: linear-gradient(to right, #4f46e5, #7c3aed);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .section-title {
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .category-container {
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .input-group {
+            padding: 0.5rem;
+        }
+        .results-section {
+            padding: 1rem;
+        }
+        .low-stock {
+            background-color: #fffbeb; /* Light orange background */
+            border-left: 4px solid #f59e0b; /* Orange border */
+        }
+        .toggle-button {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #4f46e5;
+        }
+        .toggle-button svg {
+            transition: transform 0.2s ease-in-out;
+        }
+        .toggle-button[aria-expanded="true"] svg {
+            transform: rotate(90deg);
+        }
+        .details-table th, .details-table td {
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+        }
+        .details-table th {
+            background-color: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+        }
+        .details-table td {
+            color: #4b5563;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="container">
+        <h1 class="text-4xl font-bold text-center mb-4 text-indigo-700">🐾 Yuki's Food Ordering Planner 🐾</h1>
+        <p class="text-center text-gray-600 mb-6 text-sm">
+            Plan your next order for Yuki! Enter the quantities of each item you want to order, and your current stock levels.
+            Click "Calculate" to see the total order cost and how long your supply will last.
+        </p>
+
+        <h2 class="text-3xl font-bold text-indigo-700 mb-4 section-title">Current Stock</h2>
+        <div id="stock-items-container" class="space-y-4 mb-6">
+            <!-- Stock items will be dynamically loaded here -->
+        </div>
+
+        <h2 class="text-3xl font-bold text-indigo-700 mb-4 section-title">Order Quantities</h2>
+        <div id="food-items-container" class="space-y-4 mb-6">
+            <!-- Food categories will be dynamically loaded here -->
+        </div>
+
+        <div class="flex justify-center mb-6">
+            <button id="calculate-btn" class="btn-primary text-white font-semibold py-3 px-8 rounded-full shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-300">
+                Calculate Order
+            </button>
+        </div>
+
+        <div id="results" class="bg-indigo-50 p-4 rounded-lg shadow-inner border border-indigo-200 hidden results-section">
+            <h2 class="text-2xl font-semibold text-indigo-800 mb-3 section-title">Order Summary</h2>
+            <p class="text-lg mb-1"><span class="font-medium">Total Order Cost:</span> <span id="total-cost" class="font-bold text-indigo-700">0.00 CHF</span></p>
+            <p class="text-lg mb-1"><span class="font-medium">Estimated Main Food Duration (Order + Stock):</span> <span id="main-food-duration" class="font-bold text-indigo-700">N/A</span></p>
+            <p class="text-lg mb-1"><span class="font-medium">Estimated Treats Duration (Order + Stock):</span> <span id="treats-duration" class="font-bold text-indigo-700">N/A</span></p>
+            <p class="text-lg mb-3"><span class="font-medium">Estimated Long-Term Products Duration (Order + Stock):</span> <span id="long-term-duration" class="font-bold text-indigo-700">N/A</span></p>
+
+            <h3 class="text-xl font-semibold text-indigo-800 mb-3 section-title">Cost Breakdown by Category</h3>
+            <ul class="list-disc list-inside space-y-0.5">
+                <li class="text-base"><span class="font-medium">Standard Food:</span> <span id="cost-standard-food" class="text-indigo-600">0.00 CHF</span></li>
+                <li class="text-base"><span class="font-medium">Long-Term Products:</span> <span id="cost-long-term" class="text-indigo-600">0.00 CHF</span></li>
+                <li class="text-base"><span class="font-medium">Treats:</span> <span id="cost-treats" class="text-indigo-600">0.00 CHF</span></li>
+            </ul>
+
+            <div class="mt-4">
+                <button class="toggle-button w-full text-left" aria-expanded="false" aria-controls="detailed-stock-breakdown">
+                    Detailed Stock & Duration Breakdown
+                    <svg class="w-5 h-5 ml-2 transform rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+                <div id="detailed-stock-breakdown" class="overflow-hidden transition-all duration-300 ease-in-out max-h-0">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white rounded-lg shadow-sm details-table text-sm">
+                            <thead>
+                                <tr>
+                                    <th class="py-2 px-3">Item</th>
+                                    <th class="py-2 px-3">Total Available</th>
+                                    <th class="py-2 px-3">Daily Portion</th>
+                                    <th class="py-2 px-3">Days Remaining</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detailed-breakdown-body">
+                                <!-- Detailed breakdown rows will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Define the food items with their properties
+        const foodItems = [
+            // Standard Food (Daily Meals) - Cans (1 can = 1 unit)
+            // Daily portion here refers to the portion of *this specific item* if consumed.
+            // We will sum up total available wet food cans and pellet grams for overall main food duration.
+            { id: "hahnchen_pur", name: "Canis Plus® Hähnchen pur", price: 5.85, category: "standard_food", sub_category: "wet_food_can", daily_portion_amount: 0.75, daily_portion_unit: "can", daily_portion_display: "0.75 pcs/day", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "can" },
+            { id: "wild_pur", name: "Canis Plus® Wild pur", price: 6.85, category: "standard_food", sub_category: "wet_food_can", daily_portion_amount: 0.75, daily_portion_unit: "can", daily_portion_display: "0.75 pcs/day", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "can" },
+            { id: "pferd_pur", name: "Canis Plus® Pferd pur", price: 6.85, category: "standard_food", sub_category: "wet_food_can", daily_portion_amount: 0.75, daily_portion_unit: "can", daily_portion_display: "0.75 pcs/day", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "can" },
+            { id: "weidelamm_hirse", name: "Canis Plus® Weidelamm mit Hirse und Ziegenvollmilch", price: 6.85, category: "standard_food", sub_category: "wet_food_can", daily_portion_amount: 0.75, daily_portion_unit: "can", daily_portion_display: "0.75 pcs/day", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "can" },
+            { id: "welpen_lamm", name: "Canis Plus® Welpen-Menü Lamm", price: 7.25, category: "standard_food", sub_category: "wet_food_can", daily_portion_amount: 0.5, daily_portion_unit: "can", daily_portion_display: "0.5 pcs/day", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "can" },
+            { id: "pferd_komplett", name: "Canis Plus® Pferd Komplett-Menü", price: 7.55, category: "standard_food", sub_category: "wet_food_can", daily_portion_amount: 0.5, daily_portion_unit: "can", daily_portion_display: "0.5 pcs/day", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "can" },
+            { id: "wild_komplett", name: "Canis Plus® Wild Komplett-Menü", price: 6.55, category: "standard_food", sub_category: "wet_food_can", daily_portion_amount: 0.5, daily_portion_unit: "can", daily_portion_display: "0.5 pcs/day", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "can" },
+            { id: "seelachs_komplett", name: "Canis Plus® Seelachs Komplett-Menü", price: 7.25, category: "standard_food", sub_category: "wet_food_can", daily_portion_amount: 0.5, daily_portion_unit: "can", daily_portion_display: "0.5 pcs/day", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "can" },
+
+            // Standard Food - Pellets (assuming 1kg bag = 1000g)
+            { id: "lamm_pellets", name: "Canis Plus® Lamm - kleinere Pellets", price: 38.70, category: "standard_food", sub_category: "pellets", daily_portion_amount: 40, daily_portion_unit: "g", daily_portion_display: "40g/day", stock_unit: "kg", pack_size_amount: 5000, pack_size_unit: "g" },
+            { id: "lachs_pellets", name: "Canis Plus® Lachs - kleinere Pellets", price: 38.70, category: "standard_food", sub_category: "pellets", daily_portion_amount: 40, daily_portion_unit: "g", daily_portion_display: "40g/day", stock_unit: "kg", pack_size_amount: 5000, pack_size_unit: "g" },
+
+            // Long-Term Products (Additives/Oils) - Daily consumption or fixed duration
+            // For additives with fixed duration, daily_portion_amount is 1 unit / (duration_months * 30.44 days)
+            { id: "insectvetal", name: "Canis Plus® InsectVetal®", price: 14.30, category: "long_term", daily_portion_amount: 1 / (8 * 30.44), daily_portion_unit: "unit", daily_portion_display: "8 months/unit", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "unit" },
+            { id: "lachs_ol", name: "Canis Extra Lachsöl", price: 37.20, category: "long_term", daily_portion_amount: 15, daily_portion_unit: "ml", daily_portion_display: "15ml/day", stock_unit: "ml", pack_size_amount: 250, pack_size_unit: "ml" },
+            { id: "petflora", name: "Canis Extra Petflora", price: 4.30, category: "long_term", daily_portion_amount: 1 / (8 * 30.44), daily_portion_unit: "unit", daily_portion_display: "8 months/unit", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "unit" },
+            { id: "barf_ol", name: "Canis Extra 3-6-9 BARF-Öl", price: 16.95, category: "long_term", daily_portion_amount: 10, daily_portion_unit: "ml", daily_portion_display: "10ml/day", stock_unit: "ml", pack_size_amount: 250, pack_size_unit: "ml" },
+            { id: "vermcurat", name: "Canis Extra Vermcurat®", price: 21.40, category: "long_term", daily_portion_amount: 1 / (8 * 30.44), daily_portion_unit: "unit", daily_portion_display: "8 months/unit", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "unit" },
+            { id: "mineralmoor", name: "Canis Extra Mineralmoor", price: 10.00, category: "long_term", daily_portion_amount: 5, daily_portion_unit: "ml", daily_portion_display: "5ml/day", stock_unit: "ml", pack_size_amount: 250, pack_size_unit: "ml" },
+            { id: "ceolife", name: "Canis Extra Ceolife®", price: 27.90, category: "long_term", daily_portion_amount: 2, daily_portion_unit: "g", daily_portion_display: "2g/day", stock_unit: "g", pack_size_amount: 250, pack_size_unit: "g" },
+            { id: "vit_min_flocken", name: "Canis Extra Vit/Min-Vielfalt Flocken", price: 17.40, category: "long_term", daily_portion_amount: 15, daily_portion_unit: "g", daily_portion_display: "15g/day", stock_unit: "g", pack_size_amount: 500, pack_size_unit: "g" },
+            { id: "top_fit_mix", name: "Canis Extra Top-Fit-Mix Flocken", price: 22.70, category: "long_term", daily_portion_amount: 10, daily_portion_unit: "g", daily_portion_display: "10g/day", stock_unit: "g", pack_size_amount: 500, pack_size_unit: "g" },
+            { id: "grunlippmuschel", name: "Canis Extra Grünlippmuschel-Pulver", price: 37.25, category: "long_term", daily_portion_amount: 7, daily_portion_unit: "g", daily_portion_display: "7g/day", stock_unit: "g", pack_size_amount: 250, pack_size_unit: "g" },
+            { id: "eierschalenpulver", name: "Canis Extra Bio-Eierschalenpulver", price: 39.90, category: "long_term", daily_portion_amount: 5, daily_portion_unit: "g", daily_portion_display: "5g/day", stock_unit: "g", pack_size_amount: 500, pack_size_unit: "g" },
+            { id: "algenkalk", name: "Canis Extra Algenkalk", price: 27.00, category: "long_term", daily_portion_amount: 5, daily_portion_unit: "g", daily_portion_display: "5g/day", stock_unit: "g", pack_size_amount: 500, pack_size_unit: "g" },
+            { id: "moehrengranulat", name: "Canis Extra Möhrengranulat", price: 6.80, category: "long_term", daily_portion_amount: 10, daily_portion_unit: "g", daily_portion_display: "10g/day", stock_unit: "g", pack_size_amount: 500, pack_size_unit: "g" },
+            { id: "vermprevet", name: "Canis Extra Vermprevet®", price: 35.50, category: "long_term", daily_portion_amount: 15, daily_portion_unit: "g", daily_portion_display: "15g/day", stock_unit: "g", pack_size_amount: 250, pack_size_unit: "g" },
+            { id: "aktiv", name: "Canis Extra Aktiv", price: 26.95, category: "long_term", daily_portion_amount: 15, daily_portion_unit: "g", daily_portion_display: "15g/day", stock_unit: "g", pack_size_amount: 250, pack_size_unit: "g" },
+
+            // Treats - Daily consumption
+            { id: "fischhaut_stangen", name: "Canis Plus® Fischhaut-Stangen", price: 14.70, category: "treats", daily_portion_amount: 0.5, daily_portion_unit: "stick", daily_portion_display: "0.5 sticks/day", stock_unit: "pcs", pack_size_amount: 5, pack_size_unit: "sticks" },
+            { id: "rinderlunge", name: "Canis Plus® Rinderlunge", price: 12.95, category: "treats", daily_portion_amount: 20, daily_portion_unit: "g", daily_portion_display: "20g/day", stock_unit: "g", pack_size_amount: 100, pack_size_unit: "g" },
+            { id: "hirschherzen", name: "Canis Plus® Hirschherzen", price: 14.95, category: "treats", daily_portion_amount: 10, daily_portion_unit: "g", daily_portion_display: "10g/day", stock_unit: "g", pack_size_amount: 100, pack_size_unit: "g" },
+            { id: "hirschgeweih", name: "Canis Plus® Hirschgeweih", price: 15.10, category: "treats", daily_portion_amount: 1/30, daily_portion_unit: "unit", daily_portion_display: "variable (lasts ~30 days)", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "unit" },
+            { id: "buffellunge", name: "Canis Plus® Büffellunge", price: 14.30, category: "treats", daily_portion_amount: 20, daily_portion_unit: "g", daily_portion_display: "20g/day", stock_unit: "g", pack_size_amount: 100, pack_size_unit: "g" },
+            { id: "hahnchenhalse", name: "Canis Plus® Hähnchenhälse", price: 10.00, category: "treats", daily_portion_amount: 20, daily_portion_unit: "g", daily_portion_display: "20g/day", stock_unit: "g", pack_size_amount: 100, pack_size_unit: "g" },
+        ];
+
+        // Map for stock input fields, linking to foodItems by item_id
+        const stockInputMap = [
+            { id: "lamm_pellets_stock", item_id: "lamm_pellets", label: "Canis Plus® Lamm - kleinere Pellets", unit: "kg" },
+            { id: "lachs_pellets_stock", item_id: "lachs_pellets", label: "Canis Plus® Lachs - kleinere Pellets", unit: "kg" },
+            { id: "seelachs_komplett_stock", item_id: "seelachs_komplett", label: "Canis Plus® Seelachs Komplett-Menü", unit: "pcs" },
+            { id: "pferd_komplett_stock", item_id: "pferd_komplett", label: "Canis Plus® Pferd Komplett-Menü", unit: "pcs" },
+            { id: "wild_komplett_stock", item_id: "wild_komplett", label: "Canis Plus® Wild Komplett-Menü", unit: "pcs" },
+            { id: "weidelamm_hirse_stock", item_id: "weidelamm_hirse", label: "Canis Plus® Weidelamm mit Hirse und Ziegenvollmilch", unit: "pcs" },
+            { id: "wild_pur_stock", item_id: "wild_pur", label: "Canis Plus® Wild pur", unit: "pcs" },
+            { id: "pferd_pur_stock", item_id: "pferd_pur", label: "Canis Plus® Pferd pur", unit: "pcs" },
+            { id: "hahnchen_pur_stock", item_id: "hahnchen_pur", label: "Canis Plus® Hähnchen pur", unit: "pcs" },
+            { id: "fischhaut_stangen_stock", item_id: "fischhaut_stangen", label: "Canis Plus® Fischhaut-Stangen", unit: "pcs" },
+            { id: "buffellunge_stock", item_id: "buffellunge", label: "Canis Plus® Büffellunge", unit: "g" },
+            { id: "hirschherzen_stock", item_id: "hirschherzen", label: "Canis Plus® Hirschherzen", unit: "g" },
+            { id: "rinderlunge_stock", item_id: "rinderlunge", label: "Canis Plus® Rinderlunge", unit: "g" },
+            { id: "hahnchenhalse_stock", item_id: "hahnchenhalse", label: "Canis Plus® Hähnchenhälse", unit: "g" },
+            { id: "barf_ol_stock", item_id: "barf_ol", label: "Canis Extra 3-6-9 BARF-Öl", unit: "ml" },
+            { id: "lachs_ol_stock", item_id: "lachs_ol", label: "Canis Extra Lachsöl", unit: "ml" },
+            { id: "mineralmoor_stock", item_id: "mineralmoor", label: "Canis Extra Mineralmoor", unit: "ml" },
+            { id: "insectvetal_stock", item_id: "insectvetal", label: "Canis Plus® InsectVetal®", unit: "pcs" },
+            { id: "petflora_stock", item_id: "petflora", label: "Canis Extra Petflora", unit: "pcs" },
+            { id: "vermcurat_stock", item_id: "vermcurat", label: "Canis Extra Vermcurat®", unit: "pcs" },
+            { id: "ceolife_stock", item_id: "ceolife", label: "Canis Extra Ceolife®", unit: "g" },
+            { id: "vit_min_flocken_stock", item_id: "vit_min_flocken", label: "Canis Extra Vit/Min-Vielfalt Flocken", unit: "g" },
+            { id: "top_fit_mix_stock", item_id: "top_fit_mix", label: "Canis Extra Top-Fit-Mix Flocken", unit: "g" },
+            { id: "grunlippmuschel_stock", item_id: "grunlippmuschel", label: "Canis Extra Grünlippmuschel-Pulver", unit: "g" },
+            { id: "eierschalenpulver_stock", item_id: "eierschalenpulver", label: "Canis Extra Bio-Eierschalenpulver", unit: "g" },
+            { id: "algenkalk_stock", item_id: "algenkalk", label: "Canis Extra Algenkalk", unit: "g" },
+            { id: "moehrengranulat_stock", item_id: "moehrengranulat", label: "Canis Extra Möhrengranulat", unit: "g" },
+            { id: "vermprevet_stock", item_id: "vermprevet", label: "Canis Extra Vermprevet®", unit: "g" },
+            { id: "aktiv_stock", item_id: "aktiv", label: "Canis Extra Aktiv", unit: "g" },
+            { id: "hirschgeweih_stock", item_id: "hirschgeweih", label: "Canis Plus® Hirschgeweih", unit: "pcs" },
+            { id: "other_treats_stock", item_id: "other_treats", label: "Other Treats", unit: "g" }
+        ];
+
+        const STOCK_STORAGE_KEY = 'yukiFoodStock';
+        const DAILY_WET_FOOD_CONSUMPTION_CANS = 0.5;
+        const DAILY_PELLET_CONSUMPTION_GRAMS = 40;
+        const DAILY_OTHER_TREATS_CONSUMPTION_GRAMS = 20;
+
+        // Function to group items by category
+        function groupItemsByCategory(items) {
+            return items.reduce((acc, item) => {
+                if (!acc[item.category]) {
+                    acc[item.category] = [];
+                }
+                acc[item.category].push(item);
+                return acc;
+            }, {});
+        }
+
+        // Function to render input fields for each order item
+        function renderFoodItems() {
+            const container = document.getElementById('food-items-container');
+            const groupedItems = groupItemsByCategory(foodItems);
+
+            const categoryTitles = {
+                standard_food: "Standard Food (Daily Meals)",
+                long_term: "Long-Term Products (Additives, Pellets, Oils)",
+                treats: "Treats"
+            };
+
+            for (const category in groupedItems) {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'bg-white p-4 rounded-lg shadow-md border border-gray-200 category-container';
+                const categoryId = `order-category-${category}`; // Unique ID for each category section
+                categoryDiv.innerHTML = `
+                    <button class="toggle-button w-full text-left" aria-expanded="true" aria-controls="${categoryId}-content">
+                        <h3 class="text-xl font-semibold text-gray-700 section-title m-0 p-0">${categoryTitles[category]}</h3>
+                        <svg class="w-5 h-5 ml-2 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                    <div id="${categoryId}-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-hidden transition-all duration-300 ease-in-out max-h-full"></div>
+                `;
+                const itemsGrid = categoryDiv.querySelector('.grid');
+
+                groupedItems[category].forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'input-group flex items-center justify-between bg-gray-50 p-3 rounded-md border border-gray-100';
+                    itemDiv.innerHTML = `
+                        <label for="${item.id}" class="text-gray-700 font-medium text-sm mr-2">
+                            ${item.name} <span class="text-gray-500 text-xs">(${item.price.toFixed(2)} CHF)</span>
+                            ${item.daily_portion_display ? `<br><span class="text-xs text-gray-400">Daily: ${item.daily_portion_display}</span>` : ''}
+                        </label>
+                        <input type="number" id="${item.id}" value="0" min="0" class="w-16 p-1.5 border border-gray-300 rounded-md text-center text-gray-800 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    `;
+                    itemsGrid.appendChild(itemDiv);
+                });
+                container.appendChild(categoryDiv);
+
+                // Add event listener for the toggle button
+                const toggleButton = categoryDiv.querySelector('.toggle-button');
+                const contentDiv = categoryDiv.querySelector(`#${categoryId}-content`);
+                toggleButton.addEventListener('click', () => {
+                    const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
+                    toggleButton.setAttribute('aria-expanded', !isExpanded);
+                    if (isExpanded) {
+                        contentDiv.style.maxHeight = '0';
+                        toggleButton.querySelector('svg').classList.remove('rotate-90');
+                        toggleButton.querySelector('svg').classList.add('rotate-0');
+                    } else {
+                        contentDiv.style.maxHeight = contentDiv.scrollHeight + 'px';
+                        toggleButton.querySelector('svg').classList.remove('rotate-0');
+                        toggleButton.querySelector('svg').classList.add('rotate-90');
+                    }
+                });
+            }
+        }
+
+        // Function to render input fields for stock items
+        function renderStockItems() {
+            const container = document.getElementById('stock-items-container');
+            const stockDiv = document.createElement('div');
+            stockDiv.className = 'bg-white p-4 rounded-lg shadow-md border border-gray-200 category-container';
+            stockDiv.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            `;
+            const itemsGrid = stockDiv.querySelector('.grid');
+
+            stockInputMap.forEach(stockItem => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'input-group flex items-center justify-between bg-gray-50 p-3 rounded-md border border-gray-100';
+                itemDiv.innerHTML = `
+                    <label for="${stockItem.id}" class="text-gray-700 font-medium text-sm mr-2">${stockItem.label} <span class="text-gray-500 text-xs">(${stockItem.unit})</span></label>
+                    <input type="number" id="${stockItem.id}" value="0" min="0" step="${stockItem.unit === 'kg' || stockItem.unit === 'g' || stockItem.unit === 'ml' ? '0.01' : '1'}" class="w-16 p-1.5 border border-gray-300 rounded-md text-center text-gray-800 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                `;
+                itemsGrid.appendChild(itemDiv);
+            });
+            container.appendChild(stockDiv);
+        }
+
+        // Save stock values to local storage
+        function saveStockToLocalStorage() {
+            const stockValues = {};
+            stockInputMap.forEach(stockItem => {
+                const inputElement = document.getElementById(stockItem.id);
+                if (inputElement) {
+                    stockValues[stockItem.id] = parseFloat(inputElement.value) || 0;
+                }
+            });
+            localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(stockValues));
+        }
+
+        // Load stock values from local storage
+        function loadStockFromLocalStorage() {
+            const savedStock = localStorage.getItem(STOCK_STORAGE_KEY);
+            if (savedStock) {
+                const stockValues = JSON.parse(savedStock);
+                stockInputMap.forEach(stockItem => {
+                    const inputElement = document.getElementById(stockItem.id);
+                    if (inputElement && stockValues[stockItem.id] !== undefined) {
+                        inputElement.value = stockValues[stockItem.id];
+                    }
+                });
+            }
+        }
+
+        // Function to calculate the order details
+        function calculateOrder() {
+            let totalCost = 0;
+            let costStandardFood = 0;
+            let costLongTerm = 0;
+            let costTreats = 0;
+
+            let totalWetFoodCansAvailable = 0;
+            let totalPelletGramsAvailable = 0;
+            let totalTreatsUnitsAvailable = 0;
+            let longTermProductDurationsDays = [];
+
+            const detailedBreakdownData = [];
+
+            foodItems.forEach(item => {
+                const orderQuantityInput = document.getElementById(item.id);
+                const orderQuantity = parseFloat(orderQuantityInput.value) || 0;
+
+                const stockInput = document.getElementById(item.id + '_stock');
+                let stockQuantity = 0;
+                if (stockInput) {
+                    stockQuantity = parseFloat(stockInput.value) || 0;
+                    if (item.stock_unit === 'kg' && item.pack_size_unit === 'g') {
+                        stockQuantity *= 1000;
+                    } else if (item.stock_unit === 'pcs' && item.pack_size_unit === 'sticks' && item.id === 'fischhaut_stangen') {
+                        stockQuantity *= item.pack_size_amount;
+                    }
+                }
+
+                const itemCost = orderQuantity * item.price;
+                totalCost += itemCost;
+
+                let totalAvailableConsumptionUnits = 0;
+                if (item.pack_size_amount && item.pack_size_unit) {
+                    let orderedQuantityInConsumptionUnits = orderQuantity * item.pack_size_amount;
+                    totalAvailableConsumptionUnits = orderedQuantityInConsumptionUnits + stockQuantity;
+                } else {
+                    totalAvailableConsumptionUnits = orderQuantity + stockQuantity;
+                }
+
+                let daysRemainingForItem = 0;
+                if (item.daily_portion_amount > 0) {
+                    daysRemainingForItem = totalAvailableConsumptionUnits / item.daily_portion_amount;
+                } else if (item.id === "hirschgeweih") {
+                    daysRemainingForItem = totalAvailableConsumptionUnits * 30;
+                }
+
+
+                if (item.category === "standard_food") {
+                    costStandardFood += itemCost;
+                    if (item.sub_category === "wet_food_can") {
+                        totalWetFoodCansAvailable += totalAvailableConsumptionUnits;
+                    } else if (item.sub_category === "pellets") {
+                        totalPelletGramsAvailable += totalAvailableConsumptionUnits;
+                    }
+                } else if (item.category === "long_term") {
+                    costLongTerm += itemCost;
+                    if (daysRemainingForItem > 0) {
+                        longTermProductDurationsDays.push(daysRemainingForItem);
+                    }
+                } else if (item.category === "treats") {
+                    costTreats += itemCost;
+                    if (daysRemainingForItem > 0) {
+                        totalTreatsUnitsAvailable += daysRemainingForItem;
+                    }
+                }
+
+                detailedBreakdownData.push({
+                    name: item.name,
+                    totalAvailable: `${totalAvailableConsumptionUnits.toFixed(2)} ${item.daily_portion_unit || item.pack_size_unit || 'units'}`,
+                    dailyPortion: item.daily_portion_display || 'N/A',
+                    daysRemaining: daysRemainingForItem
+                });
+            });
+
+            const otherTreatsStockInput = document.getElementById('other_treats_stock');
+            const otherTreatsStockGrams = parseFloat(otherTreatsStockInput.value) || 0;
+            if (otherTreatsStockGrams > 0) {
+                const daysFromOtherTreats = otherTreatsStockGrams / DAILY_OTHER_TREATS_CONSUMPTION_GRAMS;
+                totalTreatsUnitsAvailable += daysFromOtherTreats;
+                detailedBreakdownData.push({
+                    name: "Other Treats",
+                    totalAvailable: `${otherTreatsStockGrams.toFixed(2)} g`,
+                    dailyPortion: `${DAILY_OTHER_TREATS_CONSUMPTION_GRAMS}g/day`,
+                    daysRemaining: daysFromOtherTreats
+                });
+            }
+
+            let mainFoodDuration = "N/A (No main food available)";
+            let wetFoodDays = totalWetFoodCansAvailable / DAILY_WET_FOOD_CONSUMPTION_CANS;
+            let pelletDays = totalPelletGramsAvailable / DAILY_PELLET_CONSUMPTION_GRAMS;
+
+            if (totalWetFoodCansAvailable > 0 && totalPelletGramsAvailable > 0) {
+                mainFoodDuration = `${Math.min(wetFoodDays, pelletDays).toFixed(0)} days`;
+            } else if (totalWetFoodCansAvailable > 0) {
+                mainFoodDuration = `${wetFoodDays.toFixed(0)} days (Pellets missing for full diet)`;
+            } else if (totalPelletGramsAvailable > 0) {
+                mainFoodDuration = `${pelletDays.toFixed(0)} days (Wet food missing for full diet)`;
+            }
+
+
+            let treatsDuration = totalTreatsUnitsAvailable > 0 ? `${totalTreatsUnitsAvailable.toFixed(0)} days` : "N/A (No treats available)";
+
+            let minLongTermDurationMonths = "N/A (No long-term products available)";
+            if (longTermProductDurationsDays.length > 0) {
+                const minDays = Math.min(...longTermProductDurationsDays);
+                minLongTermDurationMonths = `${(minDays / 30.44).toFixed(1)} months`;
+            }
+
+            document.getElementById('total-cost').textContent = `${totalCost.toFixed(2)} CHF`;
+            document.getElementById('main-food-duration').textContent = mainFoodDuration;
+            document.getElementById('treats-duration').textContent = treatsDuration;
+            document.getElementById('long-term-duration').textContent = minLongTermDurationMonths;
+            document.getElementById('cost-standard-food').textContent = `${costStandardFood.toFixed(2)} CHF`;
+            document.getElementById('cost-long-term').textContent = `${costLongTerm.toFixed(2)} CHF`;
+            document.getElementById('cost-treats').textContent = `${costTreats.toFixed(2)} CHF`;
+
+            document.getElementById('results').classList.remove('hidden');
+
+            const detailedBreakdownBody = document.getElementById('detailed-breakdown-body');
+            detailedBreakdownBody.innerHTML = '';
+
+            detailedBreakdownData.sort((a, b) => a.daysRemaining - b.daysRemaining).forEach(item => {
+                const row = detailedBreakdownBody.insertRow();
+                if (item.daysRemaining > 0 && item.daysRemaining < 14) {
+                    row.classList.add('low-stock');
+                }
+                const daysDisplay = item.daysRemaining > 0 ? `${item.daysRemaining.toFixed(0)} days` : '0 days';
+                row.innerHTML = `
+                    <td class="py-1 px-2">${item.name}</td>
+                    <td class="py-1 px-2">${item.totalAvailable}</td>
+                    <td class="py-1 px-2">${item.dailyPortion}</td>
+                    <td class="py-1 px-2">${daysDisplay}</td>
+                `;
+            });
+
+            saveStockToLocalStorage();
+        }
+
+        window.onload = function() {
+            renderStockItems();
+            renderFoodItems();
+            loadStockFromLocalStorage();
+
+            document.getElementById('calculate-btn').addEventListener('click', calculateOrder);
+
+            stockInputMap.forEach(stockItem => {
+                const inputElement = document.getElementById(stockItem.id);
+                if (inputElement) {
+                    inputElement.addEventListener('change', saveStockToLocalStorage);
+                }
+            });
+            const otherTreatsStockInput = document.getElementById('other_treats_stock');
+            if (otherTreatsStockInput) {
+                otherTreatsStockInput.addEventListener('change', saveStockToLocalStorage);
+            }
+
+            const toggleButton = document.querySelector('.toggle-button');
+            const detailedSection = document.getElementById('detailed-stock-breakdown');
+
+            toggleButton.addEventListener('click', () => {
+                const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
+                toggleButton.setAttribute('aria-expanded', !isExpanded);
+                if (isExpanded) {
+                    detailedSection.style.maxHeight = '0';
+                } else {
+                    detailedSection.style.maxHeight = detailedSection.scrollHeight + 'px';
+                }
+            });
+        };
+    </script>
+</body>
+</html>
