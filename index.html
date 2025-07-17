@@ -110,9 +110,12 @@
             <!-- Food categories will be dynamically loaded here -->
         </div>
 
-        <div class="flex justify-center mb-6">
+        <div class="flex justify-center gap-4 mb-6">
             <button id="calculate-btn" class="btn-primary text-white font-semibold py-3 px-8 rounded-full shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-300">
                 Calculate Order
+            </button>
+            <button id="add-sample-order-btn" class="btn-primary text-white font-semibold py-3 px-8 rounded-full shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-indigo-300">
+                Add Sample Order
             </button>
         </div>
 
@@ -171,9 +174,9 @@
             { id: "wild_komplett", name: "Canis Plus® Wild Komplett-Menü", price: 6.55, category: "standard_food", sub_category: "wet_food_can", daily_portion_amount: 0.5, daily_portion_unit: "can", daily_portion_display: "0.5 pcs/day", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "can" },
             { id: "seelachs_komplett", name: "Canis Plus® Seelachs Komplett-Menü", price: 7.25, category: "standard_food", sub_category: "wet_food_can", daily_portion_amount: 0.5, daily_portion_unit: "can", daily_portion_display: "0.5 pcs/day", stock_unit: "pcs", pack_size_amount: 1, pack_size_unit: "can" },
 
-            // Standard Food - Pellets (assuming 1kg bag = 1000g)
+            // Standard Food - Pellets 
             { id: "lamm_pellets", name: "Canis Plus® Lamm - kleinere Pellets", price: 38.70, category: "standard_food", sub_category: "pellets", daily_portion_amount: 40, daily_portion_unit: "g", daily_portion_display: "40g/day", stock_unit: "kg", pack_size_amount: 5000, pack_size_unit: "g" },
-            { id: "lachs_pellets", name: "Canis Plus® Lachs - kleinere Pellets", price: 38.70, category: "standard_food", sub_category: "pellets", daily_portion_amount: 40, daily_portion_unit: "g", daily_portion_display: "40g/day", stock_unit: "kg", pack_size_amount: 5000, pack_size_unit: "g" },
+            { id: "lachs_pellets", name: "Canis Plus® Lachs - kleinere Pellets", price: 42.20, category: "standard_food", sub_category: "pellets", daily_portion_amount: 40, daily_portion_unit: "g", daily_portion_display: "40g/day", stock_unit: "kg", pack_size_amount: 5000, pack_size_unit: "g" },
 
             // Long-Term Products (Additives/Oils) - Daily consumption or fixed duration
             // For additives with fixed duration, daily_portion_amount is 1 unit / (duration_months * 30.44 days)
@@ -240,7 +243,7 @@
         const STOCK_STORAGE_KEY = 'yukiFoodStock';
         const DAILY_WET_FOOD_CONSUMPTION_CANS = 0.5;
         const DAILY_PELLET_CONSUMPTION_GRAMS = 40;
-        const DAILY_OTHER_TREATS_CONSUMPTION_GRAMS = 20;
+        const DAILY_OTHER_TREATS_CONSUMPTION_GRAMS = 30;
 
         // Function to group items by category
         function groupItemsByCategory(items) {
@@ -498,12 +501,37 @@
             saveStockToLocalStorage();
         }
 
+        // Function to add a sample order
+        function addSampleOrder() {
+            // Reset all order quantities to 0 first
+            foodItems.forEach(item => {
+                const inputElement = document.getElementById(item.id);
+                if (inputElement) {
+                    inputElement.value = 0;
+                }
+            });
+
+            // Set sample quantities
+            document.getElementById('pferd_komplett').value = 4;
+            document.getElementById('wild_komplett').value = 4;
+            document.getElementById('wild_pur').value = 5;
+            document.getElementById('pferd_pur').value = 2;
+            document.getElementById('fischhaut_stangen').value = 1;
+            document.getElementById('lamm_pellets').value = 1; // Assuming 1 bag of 5kg pellets
+            document.getElementById('barf_ol').value = 1;
+            document.getElementById('hirschgeweih').value = 1;
+
+            // Trigger calculation immediately
+            calculateOrder();
+        }
+
         window.onload = function() {
             renderStockItems();
             renderFoodItems();
             loadStockFromLocalStorage();
 
             document.getElementById('calculate-btn').addEventListener('click', calculateOrder);
+            document.getElementById('add-sample-order-btn').addEventListener('click', addSampleOrder); // New button event listener
 
             stockInputMap.forEach(stockItem => {
                 const inputElement = document.getElementById(stockItem.id);
@@ -516,7 +544,7 @@
                 otherTreatsStockInput.addEventListener('change', saveStockToLocalStorage);
             }
 
-            const toggleButton = document.getElementById('detailed-breakdown-toggle'); // Use specific ID
+            const toggleButton = document.getElementById('detailed-breakdown-toggle');
             const detailedSection = document.getElementById('detailed-stock-breakdown');
 
             toggleButton.addEventListener('click', () => {
@@ -529,13 +557,7 @@
                     svg.classList.remove('rotate-90');
                     svg.classList.add('rotate-0');
                 } else {
-                    // Temporarily set to 'auto' to get full scrollHeight
-                    detailedSection.style.maxHeight = 'auto';
-                    const height = detailedSection.scrollHeight;
-                    detailedSection.style.maxHeight = '0'; // Reset to 0 before animating
-                    // Force reflow
-                    detailedSection.offsetWidth; // Trigger reflow
-                    detailedSection.style.maxHeight = height + 'px';
+                    detailedSection.style.maxHeight = detailedSection.scrollHeight + 'px';
                     svg.classList.remove('rotate-0');
                     svg.classList.add('rotate-90');
                 }
