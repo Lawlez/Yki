@@ -131,7 +131,7 @@
             </ul>
 
             <div class="mt-4">
-                <button class="toggle-button w-full text-left" aria-expanded="false" aria-controls="detailed-stock-breakdown">
+                <button id="detailed-breakdown-toggle" class="toggle-button w-full text-left" aria-expanded="false" aria-controls="detailed-stock-breakdown">
                     Detailed Stock & Duration Breakdown
                     <svg class="w-5 h-5 ml-2 transform rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </button>
@@ -297,14 +297,15 @@
                 toggleButton.addEventListener('click', () => {
                     const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
                     toggleButton.setAttribute('aria-expanded', !isExpanded);
+                    const svg = toggleButton.querySelector('svg');
                     if (isExpanded) {
                         contentDiv.style.maxHeight = '0';
-                        toggleButton.querySelector('svg').classList.remove('rotate-90');
-                        toggleButton.querySelector('svg').classList.add('rotate-0');
+                        svg.classList.remove('rotate-90');
+                        svg.classList.add('rotate-0');
                     } else {
                         contentDiv.style.maxHeight = contentDiv.scrollHeight + 'px';
-                        toggleButton.querySelector('svg').classList.remove('rotate-0');
-                        toggleButton.querySelector('svg').classList.add('rotate-90');
+                        svg.classList.remove('rotate-0');
+                        svg.classList.add('rotate-90');
                     }
                 });
             }
@@ -515,16 +516,28 @@
                 otherTreatsStockInput.addEventListener('change', saveStockToLocalStorage);
             }
 
-            const toggleButton = document.querySelector('.toggle-button');
+            const toggleButton = document.getElementById('detailed-breakdown-toggle'); // Use specific ID
             const detailedSection = document.getElementById('detailed-stock-breakdown');
 
             toggleButton.addEventListener('click', () => {
                 const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
                 toggleButton.setAttribute('aria-expanded', !isExpanded);
+                const svg = toggleButton.querySelector('svg');
+
                 if (isExpanded) {
                     detailedSection.style.maxHeight = '0';
+                    svg.classList.remove('rotate-90');
+                    svg.classList.add('rotate-0');
                 } else {
-                    detailedSection.style.maxHeight = detailedSection.scrollHeight + 'px';
+                    // Temporarily set to 'auto' to get full scrollHeight
+                    detailedSection.style.maxHeight = 'auto';
+                    const height = detailedSection.scrollHeight;
+                    detailedSection.style.maxHeight = '0'; // Reset to 0 before animating
+                    // Force reflow
+                    detailedSection.offsetWidth; // Trigger reflow
+                    detailedSection.style.maxHeight = height + 'px';
+                    svg.classList.remove('rotate-0');
+                    svg.classList.add('rotate-90');
                 }
             });
         };
