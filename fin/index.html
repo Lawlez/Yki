@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swiss Fi Tools</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Fira Code', monospace; 
+            background-color: #020617; 
+            color: #ffffff;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            letter-spacing: -1px;
+        }
+
+        /* Layout Grid */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        /* Custom Theme Classes */
+        .text-custom-green { color: rgb(0, 204, 51); }
+        .bg-custom-green { background-color: rgb(0, 204, 51); }
+        .text-custom-pink { color: rgb(240, 118, 147); }
+        .bg-custom-pink { background-color: rgb(240, 118, 147); }
+        .border-custom-pink { border-color: rgb(240, 118, 147); }
+        
+        .card-dark { 
+            background-color: #0f172a; 
+            border: 2px solid #334155; 
+            border-radius: 12px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .card-dark:hover {
+            border-color: rgb(240, 118, 147);
+            transform: translateY(-4px);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+        }
+        
+        .btn-primary {
+            background-color: rgb(240, 118, 147);
+            color: white;
+            font-weight: 600;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .btn-primary:hover { 
+            opacity: 0.9; 
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(240, 118, 147, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1 class="text-custom-pink">Swiss <span class="text-custom-green">Fi</span> Tools</h1>
+
+    <div class="menu-grid" id="menu-container">
+        </div>
+
+    <script>
+        // You can easily update your links and titles here
+        const menuItems = [
+            { title: "Swiss Budgeting Tool", link: "budget/index.html" },
+            { title: "Swiss Investing & Retirement Tool", link: "simulator/index.html" },
+            { title: "Swiss Budget & Strategy Rating Tool", link: "rating/index.html" },
+            { title: "FX Finance Optimizer", link: "FX/index.html" }
+        ];
+
+        const container = document.getElementById('menu-container');
+
+        menuItems.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card-dark';
+            
+            card.innerHTML = `
+                <div class="card-title">${item.title}</div>
+                <a href="${item.link}" class="btn-primary">Launch Tool</a>
+            `;
+            
+            container.appendChild(card);
+        });
+    </script>
+</body>
+</html>

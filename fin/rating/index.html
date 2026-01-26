@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Master Check | 2061</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Fira Code', monospace; 
+            background-color: #020617; 
+            color: #ffffff;
+        }
+        .text-custom-green { color: rgb(0, 204, 51); }
+        .bg-custom-green { background-color: rgb(0, 204, 51); }
+        .text-custom-pink { color: rgb(240, 118, 147); }
+        .bg-custom-pink { background-color: rgb(240, 118, 147); }
+        .border-custom-pink { border-color: rgb(240, 118, 147); }
+        
+        .card-dark { 
+            background-color: #0f172a; 
+            border: 2px solid #334155; 
+            border-radius: 12px;
+        }
+        .card-accent { 
+            background-color: #0f172a; 
+            border: 2px solid rgb(240, 118, 147); 
+            border-radius: 12px;
+        }
+        
+        .btn-primary {
+            background-color: rgb(240, 118, 147);
+            color: white;
+            font-weight: 600;
+            padding: 12px 24px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary:disabled { background-color: #334155; cursor: not-allowed; }
+
+        .file-upload-box {
+            border: 2px dashed #334155;
+            padding: 1.5rem;
+            text-align: center;
+            border-radius: 12px;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+        .file-upload-box:hover {
+            border-color: rgb(0, 204, 51);
+            background-color: #1e293b;
+        }
+        .file-upload-box.loaded {
+            border-color: rgb(0, 204, 51);
+            border-style: solid;
+        }
+        .file-input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        input:checked + .slider { background-color: rgb(0, 204, 51); }
+        .slider:before {
+            position: absolute; content: "";
+            height: 18px; width: 18px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        .star-filled { color: rgb(240, 118, 147); }
+        .star-empty { color: #334155; }
+
+        .section-title {
+            position: relative;
+            padding-left: 1rem;
+            border-left: 4px solid rgb(240, 118, 147);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <div class="mb-8">
+            <h1 class="text-3xl font-extrabold mb-2 uppercase tracking-tighter text-white">Deep <span class="text-custom-pink">Financial</span> Audit</h1>
+            <p class="text-slate-400">Analysiere Strategie, Prognose und dein monatliches Budget.</p>
+        </div>
+
+        <!-- File Inputs Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div id="boxStrategy" class="file-upload-box">
+                <input type="file" id="fileStrategy" class="file-input" accept=".json">
+                <div class="flex flex-col items-center">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">1. Strategie</span>
+                    <span id="labelStrategy" class="mt-1 text-[10px] text-slate-500 text-center">JSON laden</span>
+                </div>
+            </div>
+            <div id="boxPrognosis" class="file-upload-box">
+                <input type="file" id="filePrognosis" class="file-input" accept=".json">
+                <div class="flex flex-col items-center">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">2. Prognose</span>
+                    <span id="labelPrognosis" class="mt-1 text-[10px] text-slate-500 text-center">JSON laden</span>
+                </div>
+            </div>
+            <div id="boxBudget" class="file-upload-box">
+                <input type="file" id="fileBudget" class="file-input" accept=".json">
+                <div class="flex flex-col items-center">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">3. Budget</span>
+                    <span id="labelBudget" class="mt-1 text-[10px] text-slate-500 text-center">JSON laden</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-dark p-6 mb-12 space-y-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div class="space-y-4">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <div class="switch">
+                            <input type="checkbox" id="taxSubtract" checked>
+                            <span class="slider"></span>
+                        </div>
+                        <span class="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">
+                            Steuern vom Sparkonto abziehen (Anlage-Sicht)
+                        </span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <div class="switch">
+                            <input type="checkbox" id="include13th" checked>
+                            <span class="slider"></span>
+                        </div>
+                        <span class="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">
+                            13. Monatslohn in Monats-Budget einrechnen
+                        </span>
+                    </label>
+                </div>
+                <button id="analyzeBtn" onclick="deepAnalyze()" class="btn-primary w-full md:w-auto px-12" disabled>Audit starten</button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="hidden space-y-12">
+            
+            <!-- BUDGET ANALYSIS SECTION -->
+            <div id="budgetSection" class="hidden space-y-6">
+                <h2 class="text-xl font-bold section-title mb-6 uppercase tracking-widest text-white">Budget <span class="text-custom-pink">&</span> Lifestyle</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="card-dark p-6 text-center">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase mb-1 block tracking-widest">Netto-Einkommen</span>
+                        <span id="budgetIncome" class="text-2xl font-black text-white">-- CHF</span>
+                    </div>
+                    <div class="card-dark p-6 text-center border-custom-green">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase mb-1 block tracking-widest">Effektive Sparquote</span>
+                        <span id="savingsRate" class="text-2xl font-black text-custom-green">--%</span>
+                    </div>
+                    <div class="card-dark p-6 text-center">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase mb-1 block tracking-widest">Überschuss/Monat</span>
+                        <span id="budgetSurplus" class="text-2xl font-black text-white">-- CHF</span>
+                    </div>
+                </div>
+                <div id="budgetDetailList" class="space-y-4"></div>
+            </div>
+
+            <!-- INVESTMENT ANALYSIS SECTION -->
+            <div id="investmentSection" class="hidden space-y-6">
+                <h2 class="text-xl font-bold section-title mb-6 uppercase tracking-widest text-white">Anlage <span class="text-custom-pink">&</span> Strategie</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="card-accent p-6 text-center">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase mb-1 block tracking-widest">Endvermögen 2061</span>
+                        <span id="finalTotal" class="text-2xl font-black text-custom-pink">-- CHF</span>
+                    </div>
+                    <div class="card-dark p-6 text-center border-custom-green">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase mb-1 block tracking-widest">Ø Netto-Rendite</span>
+                        <span id="wReturn" class="text-2xl font-black text-custom-green">--%</span>
+                    </div>
+                    <div class="card-dark p-6 text-center">
+                        <span class="text-slate-400 text-[10px] font-bold uppercase mb-1 block tracking-widest">3a Steuerersparnis</span>
+                        <span id="totalTaxSavings" class="text-2xl font-black text-white">-- CHF</span>
+                    </div>
+                </div>
+                <div id="detailList" class="space-y-4"></div>
+            </div>
+
+            <p class="text-center text-slate-500 text-[10px] mt-8">
+                Die Analyse basiert auf den hochgeladenen JSON-Modellen. Alle Werte ohne Gewähr.
+            </p>
+        </div>
+    </div>
+
+<script>
+let strategyData = null;
+let prognosisData = null;
+let budgetData = null;
+
+// File Upload Handling
+document.getElementById('fileStrategy').addEventListener('change', e => handleFile(e.target.files[0], 'strategy'));
+document.getElementById('filePrognosis').addEventListener('change', e => handleFile(e.target.files[0], 'prognosis'));
+document.getElementById('fileBudget').addEventListener('change', e => handleFile(e.target.files[0], 'budget'));
+
+function handleFile(file, type) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const json = JSON.parse(e.target.result);
+            if (type === 'strategy') {
+                strategyData = json;
+                document.getElementById('boxStrategy').classList.add('loaded');
+                document.getElementById('labelStrategy').innerText = file.name;
+            } else if (type === 'prognosis') {
+                prognosisData = json;
+                document.getElementById('boxPrognosis').classList.add('loaded');
+                document.getElementById('labelPrognosis').innerText = file.name;
+            } else if (type === 'budget') {
+                budgetData = json;
+                document.getElementById('boxBudget').classList.add('loaded');
+                document.getElementById('labelBudget').innerText = file.name;
+            }
+            checkInputs();
+        } catch (err) {
+            alert("Fehler beim Laden von " + file.name);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function checkInputs() {
+    const btn = document.getElementById('analyzeBtn');
+    if (strategyData || budgetData) {
+        btn.disabled = false;
+    }
+}
+
+function renderCard(targetId, e) {
+    const list = document.getElementById(targetId);
+    const stars = Array(5).fill(0).map((_, i) => `<span class="${i < e.stars ? 'star-filled' : 'star-empty'}">★</span>`).join('');
+    list.innerHTML += `
+        <div class="card-dark p-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
+                <div>
+                    <span class="text-custom-pink text-[10px] font-black uppercase tracking-widest">${e.name}</span>
+                    <h3 class="text-lg font-bold text-white">${e.title}</h3>
+                </div>
+                <div class="text-2xl">${stars}</div>
+            </div>
+            <div class="bg-[#1e293b] p-4 rounded-lg border-l-4 border-custom-green text-slate-300 text-[11px] leading-relaxed">
+                ${e.insight}
+            </div>
+        </div>
+    `;
+}
+
+function deepAnalyze() {
+    document.getElementById('results').classList.remove('hidden');
+    
+    // --- BUDGET ANALYSIS ---
+    if (budgetData) {
+        const b = budgetData;
+        const use13th = document.getElementById('include13th').checked;
+        const monthlyNet = b.income.monthlyNet;
+        
+        // Berechnung des monatlich verfügbaren Einkommens
+        const effectiveMonthlyIncome = (b.income.has13th && use13th) ? (monthlyNet * 13 / 12) : monthlyNet;
+        
+        const sumFixed = b.fixedItems.reduce((acc, item) => acc + (item.frequency === 'monthly' ? item.amount : item.amount / 12), 0);
+        const sumVar = b.varItems.reduce((acc, item) => acc + (item.frequency === 'monthly' ? item.amount : item.amount / 12), 0);
+        const sumInvest = b.investing + (b.taxState?.pillar3a_monthly || 0);
+        
+        const surplus = effectiveMonthlyIncome - sumFixed - sumVar - sumInvest;
+        const annualIncome = b.income.has13th ? monthlyNet * 13 : monthlyNet * 12;
+        const totalAnnualSavings = (sumInvest + Math.max(0, surplus)) * 12;
+        const savingsRate = (totalAnnualSavings / annualIncome) * 100;
+
+        document.getElementById('budgetSection').classList.remove('hidden');
+        document.getElementById('budgetIncome').innerText = `${Math.round(effectiveMonthlyIncome).toLocaleString()} CHF`;
+        document.getElementById('savingsRate').innerText = `${savingsRate.toFixed(1)}%`;
+        document.getElementById('budgetSurplus').innerText = `${Math.round(surplus).toLocaleString()} CHF`;
+
+        const budgetList = document.getElementById('budgetDetailList');
+        budgetList.innerHTML = '';
+
+        const miete = b.fixedItems.find(i => i.name.toLowerCase().includes('miete'))?.amount || 0;
+        const rentRatio = miete / effectiveMonthlyIncome;
+        renderCard('budgetDetailList', {
+            name: "Housing",
+            stars: rentRatio < 0.25 ? 5 : (rentRatio < 0.33 ? 4 : 2),
+            title: "Wohnkosten-Quote",
+            insight: `Deine Miete macht ${Math.round(rentRatio*100)}% deines verfügbaren Einkommens aus. ${use13th ? '(Basis: Ø inkl. 13.)' : '(Basis: Normaler Monat)'}. In der Schweiz gilt eine Quote unter 33% als gesund.`
+        });
+
+        renderCard('budgetDetailList', {
+            name: "Wealth",
+            stars: savingsRate > 30 ? 5 : (savingsRate > 15 ? 4 : 2),
+            title: "Spar- & Investitionsquote",
+            insight: `Deine jährliche Sparquote liegt bei ${savingsRate.toFixed(1)}%. Dies ist ein exzellenter Wert für den langfristigen Vermögensaufbau. Alles über 20% beschleunigt deine finanzielle Freiheit massiv.`
+        });
+
+        const needsRatio = sumFixed / effectiveMonthlyIncome;
+        renderCard('budgetDetailList', {
+            name: "Needs",
+            stars: needsRatio < 0.5 ? 5 : (needsRatio < 0.6 ? 3 : 1),
+            title: "Fixkosten-Management",
+            insight: `Deine Fixkosten liegen bei ${Math.round(needsRatio*100)}% deines Budgets. Ziel der 50/30/20 Regel sind maximal 50% für Fixkosten.`
+        });
+    }
+
+    // --- STRATEGY ANALYSIS ---
+    if (strategyData) {
+        const strategy = strategyData;
+        const prognosis = prognosisData;
+        const assets = strategy.assets || [];
+        const subtractTax = document.getElementById('taxSubtract').checked;
+        const annualTax = strategy.projectedAnnualTax || 0;
+        const monthlyTax = annualTax / 12;
+
+        let effectiveMonthlyTotal = 0;
+        let weightedReturnSum = 0;
+        let catsNow = { retirement: 0, safety: 0 };
+
+        assets.forEach(a => {
+            let contribution = a.monthlyContribution;
+            if (subtractTax && a.id === 'cash') contribution = Math.max(0, contribution - monthlyTax);
+            effectiveMonthlyTotal += contribution;
+            if (a.category === 'retirement') catsNow.retirement += contribution;
+            if (['gold', 'cash'].includes(a.id)) catsNow.safety += contribution;
+            weightedReturnSum += (a.annualReturn * contribution);
+        });
+
+        const netReturn = effectiveMonthlyTotal > 0 ? weightedReturnSum / effectiveMonthlyTotal : 0;
+        const retRatio = effectiveMonthlyTotal > 0 ? catsNow.retirement / effectiveMonthlyTotal : 0;
+
+        let finalYear = prognosis ? prognosis[prognosis.length - 1] : null;
+        let startYear = prognosis ? prognosis[0] : null;
+
+        document.getElementById('investmentSection').classList.remove('hidden');
+        document.getElementById('finalTotal').innerText = finalYear ? `${finalYear.total.toLocaleString()} CHF` : "N/A";
+        document.getElementById('wReturn').innerText = `${netReturn.toFixed(2)}%`;
+        document.getElementById('totalTaxSavings').innerText = finalYear ? `${(finalYear.accTaxSavings || 0).toLocaleString()} CHF` : "N/A";
+
+        const detailList = document.getElementById('detailList');
+        detailList.innerHTML = '';
+
+        // 1. Steuer-Hebel (Details restored)
+        const taxStars = Math.min(5, Math.ceil(retRatio * 8.5));
+        let taxInsight = `Du investierst ${Math.round(retRatio*100)}% deiner Sparquote steueroptimiert in die 2./3. Säule.`;
+        if (finalYear && finalYear.accTaxSavings > 0) {
+            taxInsight += ` In deiner Prognose sparst du bis 2061 insgesamt ca. ${finalYear.accTaxSavings.toLocaleString()} CHF an Steuern allein durch die Säule 3a.`;
+        }
+        renderCard('detailList', {
+            name: "Steuer-Hebel",
+            stars: taxStars,
+            title: "Steuer-Effizienz",
+            insight: taxInsight
+        });
+
+        // 2. Kapital-Verfügbarkeit (Details restored)
+        const liqStars = Math.max(1, Math.min(5, Math.floor((1 - retRatio) * 7.5)));
+        renderCard('detailList', {
+            name: "Liquidität",
+            stars: liqStars,
+            title: "Kapital-Verfügbarkeit",
+            insight: `Da ${Math.round(retRatio*100)}% deines Kapitals gebunden sind, ist dein 'Lock-in' hoch. Ein Vorbezug ist nur für Eigenheim, Selbstständigkeit oder Auswanderung möglich.`
+        });
+
+        // 3. Performance (Details restored)
+        renderCard('detailList', {
+            name: "Performance",
+            stars: Math.max(1, Math.min(5, Math.floor(netReturn / 1.15))),
+            title: "Wachstums-Potenzial",
+            insight: `Mit einer gewichteten Netto-Rendite von ${netReturn.toFixed(2)}% schlägst du die Inflation deutlich. Dein Portfolio nutzt den Zinseszins-Effekt durch hohe Aktien- & Krypto-Quoten optimal aus.`
+        });
+
+        // 4. Resilienz (Details restored)
+        if (finalYear) {
+            const finalSafety = (finalYear.gold || 0) + (finalYear.cash || 0);
+            const finalSafetyRatio = finalSafety / finalYear.total;
+            const resStars = finalSafetyRatio > 0.25 ? 5 : (finalSafetyRatio > 0.1 ? 3 : 1);
+            renderCard('detailList', {
+                name: "Resilienz",
+                stars: resStars,
+                title: "Portfolio-Schutz 2061",
+                insight: `Dein Sicherheitsanker (Gold & Cash) macht zum Ende ca. ${Math.round(finalSafetyRatio*100)}% aus. Zusammen mit den Rebalancing-Regeln schützt dich das vor der Entnahmephase.`
+            });
+        }
+
+        // 5. Zinseszins / Multiplikator (Details restored)
+        if (finalYear && startYear) {
+            const factor = finalYear.total / startYear.total;
+            renderCard('detailList', {
+                name: "Zinseszins",
+                stars: factor > 20 ? 5 : (factor > 10 ? 4 : 3),
+                title: "Vermögens-Multiplikator",
+                insight: `Dein Vermögen vervielfacht sich vom Start bis 2061 um das ${factor.toFixed(1)}-fache. Dies zeigt die enorme Hebelwirkung deiner langen Laufzeit und konsequenten Reinvestition.`
+            });
+        }
+    }
+
+    window.scrollTo({ top: document.getElementById('results').offsetTop - 20, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

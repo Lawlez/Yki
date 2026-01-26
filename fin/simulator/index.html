@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwissFi Simulator 6.6 (Dark/Cyber)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Google Fonts: Fira Code -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        body { 
+            font-family: 'Fira Code', monospace; 
+            background-color: #020617; 
+            color: #ffffff;
+        }
+        
+        /* Custom Scrollbar for Dark Mode */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        /* Accents */
+        .text-custom-green { color: rgb(0, 204, 51); }
+        .bg-custom-green { background-color: rgb(0, 204, 51); }
+        .border-custom-green { border-color: rgb(0, 204, 51); }
+        .fill-custom-green { fill: rgb(0, 204, 51); }
+        
+        .text-custom-pink { color: rgb(240, 118, 147); }
+        .bg-custom-pink { background-color: rgb(240, 118, 147); }
+        .border-custom-pink { border-color: rgb(240, 118, 147); }
+        .fill-custom-pink { fill: rgb(240, 118, 147); }
+        
+        /* Cards */
+        .card-dark { 
+            background-color: #0f172a; 
+            border: 1px solid #1e293b; 
+            border-radius: 0.75rem;
+        }
+        .card-accent { 
+            background-color: #0f172a; 
+            border: 2px solid rgb(240, 118, 147); 
+            border-radius: 0.75rem;
+        }
+
+        .input-dark {
+            background-color: #020617;
+            border: 1px solid #334155;
+            color: white;
+            transition: border-color 0.2s;
+        }
+        .input-dark:focus {
+            outline: none;
+            border-color: rgb(240, 118, 147);
+        }
+
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect, useRef } = React;
+        const { AreaChart, Area, LineChart, Line, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
+
+        // --- Icons ---
+        const Icons = {
+            Calculator: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>,
+            TrendingUp: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
+            Wallet: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>,
+            Home: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+            Settings: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.35a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>,
+            Save: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>,
+            Edit3: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>,
+            CheckCircle: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+            ArrowDownCircle: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>,
+            Landmark: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>,
+            Download: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>,
+            Upload: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>,
+            PiggyBank: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2.5V5z"/><line x1="16" x2="16" y1="9" y2="9"/><circle cx="9" cy="9" r="1"/></svg>,
+            Search: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
+            ChevronDown: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
+            ChevronUp: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>,
+            Repeat: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>,
+            Trash: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
+            Layers: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>,
+            RefreshCw: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+        };
+
+        const formatCHF = (val) => new Intl.NumberFormat('de-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 }).format(val);
+
+        const SCENARIOS = {
+            conservative: { id: 'conservative', label: 'Konservativ', factor: 0.8 },
+            standard: { id: 'standard', label: 'Standard', factor: 1.0 },
+            optimistic: { id: 'optimistic', label: 'Optimistisch', factor: 1.2 }
+        };
+
+        const PILLAR_3A_IDS = ['frankly', 'finpen_save', 'finpen_risky'];
+
+        // --- Safe Storage Helper (From Version 2) ---
+        const safeJSONParse = (key, fallback) => {
+            try {
+                const item = localStorage.getItem(key);
+                return item ? JSON.parse(item) : fallback;
+            } catch (e) {
+                console.warn(`Error parsing ${key}, resetting to fallback`);
+                return fallback;
+            }
+        };
+
+        // --- Simulation Logic (Extracted & Optimized from Version 2) ---
+        const runSimulation = (assetsConfig, history, config) => {
+            if (!assetsConfig || assetsConfig.length === 0) return [];
+            
+            const { 
+                currentYear, historyStartYear, yearsToSimulate, payTaxFromAssets, 
+                projectedAnnualTax, marginalTaxRate, rebalanceRules, scenario 
+            } = config;
+
+            let data = [];
+            let runningValues = {};
+            let runningAccTaxSavings = 0;
+            
+            assetsConfig.forEach(a => runningValues[a.id] = a.initialValue);
+            const scenarioFactor = SCENARIOS[scenario] ? SCENARIOS[scenario].factor : 1.0;
+
+            for (let i = 0; i <= yearsToSimulate; i++) {
+                const year = historyStartYear + i; 
+                const historyRecord = history.find(h => h.year === year);
+                let snapshot = { year, isActual: false, taxPaid: 0, taxSavings3a: 0, accTaxSavings: 0 };
+                let yearTotal = 0;
+
+                if (year < currentYear) {
+                    // HISTORICAL
+                    if (historyRecord && historyRecord.isActual) {
+                        assetsConfig.forEach(asset => {
+                            const val = historyRecord.values[asset.id] || 0;
+                            snapshot[asset.id] = val;
+                            yearTotal += val;
+                        });
+                        snapshot.isActual = true;
+                        snapshot.taxPaid = historyRecord.taxPaid;
+                        snapshot.accTaxSavings = 0;
+                    } else {
+                        assetsConfig.forEach(asset => snapshot[asset.id] = 0);
+                    }
+                } else {
+                    // FORECAST
+                    if (year === currentYear) {
+                        assetsConfig.forEach(a => runningValues[a.id] = a.initialValue);
+                    }
+
+                    // 1. 3a Tax Savings
+                    let total3aContribution = 0;
+                    assetsConfig.forEach(asset => {
+                        if (PILLAR_3A_IDS.some(id => asset.id.includes(id))) {
+                            total3aContribution += asset.monthlyContribution * 12;
+                        }
+                    });
+                    const taxSavings = total3aContribution * (marginalTaxRate / 100);
+                    runningAccTaxSavings += taxSavings;
+                    snapshot.taxSavings3a = taxSavings;
+                    snapshot.accTaxSavings = runningAccTaxSavings;
+
+                    // 2. Tax Deduction
+                    let effectiveTaxToPay = 0;
+                    if (payTaxFromAssets) {
+                        effectiveTaxToPay = Math.max(0, projectedAnnualTax - taxSavings);
+                    }
+                    let remainingTaxToDeduct = effectiveTaxToPay;
+                    
+                    assetsConfig.forEach(asset => {
+                        let val = runningValues[asset.id];
+                        let baseRate = asset.annualReturn;
+                        let effectiveRate = baseRate * scenarioFactor;
+                        
+                        if (asset.isDynamicInterest) {
+                            if (val > 0) {
+                                if (val <= 50000) effectiveRate = 0.05 * scenarioFactor;
+                                else {
+                                    const baseInterest = 50000 * 0.0005; 
+                                    const excessInterest = (val - 50000) * 0.0001;
+                                    effectiveRate = ((baseInterest + excessInterest) / val) * 100;
+                                }
+                            } else effectiveRate = 0;
+                        }
+                        
+                        val = val * (1 + effectiveRate / 100);
+                        val += asset.monthlyContribution * 12;
+
+                        if (payTaxFromAssets && asset.id === 'cash') {
+                            if (val >= remainingTaxToDeduct) { val -= remainingTaxToDeduct; remainingTaxToDeduct = 0; }
+                            else { remainingTaxToDeduct -= val; val = 0; }
+                        }
+                        runningValues[asset.id] = val; 
+                    });
+
+                    // 3. Rebalancing
+                    if (rebalanceRules && rebalanceRules.length > 0) {
+                        rebalanceRules.forEach(rule => {
+                            const sourceVal = runningValues[rule.sourceId] || 0;
+                            let conditionMet = false;
+                            if (rule.condition === 'gt' && sourceVal > rule.threshold) conditionMet = true;
+                            if (rule.condition === 'lt' && sourceVal < rule.threshold) conditionMet = true;
+                            if (conditionMet) {
+                                const amountToMove = Math.min(sourceVal, rule.amount); 
+                                if (amountToMove > 0) {
+                                    runningValues[rule.sourceId] -= amountToMove;
+                                    runningValues[rule.targetId] = (runningValues[rule.targetId] || 0) + amountToMove;
+                                }
+                            }
+                        });
+                    }
+
+                    assetsConfig.forEach(asset => {
+                        snapshot[asset.id] = Math.round(runningValues[asset.id]);
+                        yearTotal += Math.round(runningValues[asset.id]);
+                    });
+                    snapshot.isActual = false;
+                }
+                snapshot.total = Math.round(yearTotal);
+                data.push(snapshot);
+            }
+            return data;
+        };
+
+        const AssetInputRow = React.memo(({ asset, currentYear, onChange, scenario }) => {
+            const effectiveReturn = asset.annualReturn * SCENARIOS[scenario].factor;
+            const displayReturn = asset.isDynamicInterest && effectiveReturn < 0.01 ? 0.01 : effectiveReturn;
+            
+            return (
+                <div className="card-dark p-4 mb-3 transition-colors duration-300">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: asset.color }}></div>
+                            <span className="font-semibold text-white">{asset.name}</span>
+                        </div>
+                        <span className="text-xs px-2 py-0.5 bg-slate-800 text-slate-400 uppercase font-bold tracking-wide border border-slate-700 rounded">{asset.category}</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label className="block text-xs text-slate-400 mb-1 font-bold text-custom-pink">Stand 31.12.{currentYear-1}</label>
+                            <input type="number" value={asset.initialValue} onChange={(e) => onChange(asset.id, 'initialValue', parseFloat(e.target.value) || 0)} className="input-dark w-full p-2 rounded text-sm font-mono" />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-slate-400 mb-1">Monatlicher Beitrag (ab {currentYear})</label>
+                            <input type="number" value={asset.monthlyContribution} onChange={(e) => onChange(asset.id, 'monthlyContribution', parseFloat(e.target.value) || 0)} className="input-dark w-full p-2 rounded text-sm font-mono" />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-slate-400 mb-1">{asset.isDynamicInterest ? 'Zins Basis' : 'Ø Rendite (Basis)'}</label>
+                            <div className="relative">
+                                <input type="number" step="0.01" value={asset.annualReturn} disabled={asset.isDynamicInterest} onChange={(e) => onChange(asset.id, 'annualReturn', parseFloat(e.target.value) || 0)} className={`input-dark w-full p-2 rounded text-sm font-mono ${asset.isDynamicInterest ? 'opacity-50 cursor-not-allowed' : ''}`} />
+                                {scenario !== 'standard' && !asset.isDynamicInterest && (<span className="absolute right-2 top-2 text-xs text-slate-500">Effektiv: {displayReturn.toFixed(2)}%</span>)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        });
+
+        const RulesManager = ({ rules, setRules, assets }) => {
+            const [newRule, setNewRule] = useState({ sourceId: 'cash', targetId: 'finpen_risky', threshold: 15000, amount: 5000, condition: 'gt' });
+            
+            const addRule = () => setRules([...rules, { ...newRule, id: Date.now() }]);
+            const removeRule = (id) => setRules(rules.filter(r => r.id !== id));
+            
+            return (
+                <div className="card-accent p-4 mb-6">
+                    <h3 className="font-bold text-custom-pink flex items-center gap-2 mb-3"><Icons.Repeat className="w-4 h-4" /> Cash-Flow Manager (Autom. Umschichtung)</h3>
+                    <p className="text-xs text-slate-400 mb-4">Definiere Regeln, die am Ende jedes Jahres ausgeführt werden.</p>
+                    
+                    {rules.length > 0 && (
+                        <div className="space-y-2 mb-4">
+                            {rules.map(rule => (
+                                <div key={rule.id} className="bg-slate-900 p-2 rounded border border-slate-700 flex justify-between items-center text-sm shadow-sm">
+                                    <div className="flex items-center gap-2 flex-wrap text-slate-300">
+                                        <span className="font-bold text-slate-500">Wenn</span>
+                                        <span className="bg-slate-800 px-2 py-0.5 rounded text-white">{assets.find(a=>a.id===rule.sourceId)?.name}</span>
+                                        <span>{rule.condition==='gt'?'>':'<'}</span>
+                                        <span className="font-mono font-bold text-white">{formatCHF(rule.threshold)}</span>
+                                        <span className="font-bold text-slate-500">→ Verschiebe</span>
+                                        <span className="font-mono font-bold text-custom-green">{formatCHF(rule.amount)}</span>
+                                        <span>nach</span>
+                                        <span className="bg-slate-800 px-2 py-0.5 rounded text-white border border-slate-700">{assets.find(a=>a.id===rule.targetId)?.name}</span>
+                                    </div>
+                                    <button onClick={() => removeRule(rule.id)} className="text-slate-500 hover:text-red-400 p-1"><Icons.Trash className="w-4 h-4"/></button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    
+                    <div className="flex flex-wrap gap-2 items-end bg-slate-800/50 p-3 rounded border border-slate-700">
+                        <div className="flex flex-col gap-1"><label className="text-[10px] font-bold text-custom-pink">Quelle</label><select value={newRule.sourceId} onChange={e => setNewRule({...newRule, sourceId: e.target.value})} className="input-dark p-1 rounded text-sm w-32">{assets.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></div>
+                        <div className="flex flex-col gap-1"><label className="text-[10px] font-bold text-custom-pink">Bedingung</label><select value={newRule.condition} onChange={e => setNewRule({...newRule, condition: e.target.value})} className="input-dark p-1 rounded text-sm w-20"><option value="gt">Grösser als</option><option value="lt">Kleiner als</option></select></div>
+                        <div className="flex flex-col gap-1"><label className="text-[10px] font-bold text-custom-pink">Grenzwert</label><input type="number" value={newRule.threshold} onChange={e => setNewRule({...newRule, threshold: parseFloat(e.target.value)})} className="input-dark p-1 rounded text-sm w-24" /></div>
+                        <div className="flex flex-col gap-1"><label className="text-[10px] font-bold text-custom-pink">Betrag</label><input type="number" value={newRule.amount} onChange={e => setNewRule({...newRule, amount: parseFloat(e.target.value)})} className="input-dark p-1 rounded text-sm w-24" /></div>
+                        <div className="flex flex-col gap-1"><label className="text-[10px] font-bold text-custom-pink">Ziel</label><select value={newRule.targetId} onChange={e => setNewRule({...newRule, targetId: e.target.value})} className="input-dark p-1 rounded text-sm w-32">{assets.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></div>
+                        <button onClick={addRule} className="bg-custom-pink hover:bg-pink-600 text-slate-900 px-3 py-1.5 rounded text-sm font-bold flex items-center gap-1 transition-colors"><Icons.Repeat className="w-3 h-3" /> Regel hinzufügen</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const CalculationInspector = ({ assets, currentYear, payTaxFromAssets, projectedAnnualTax, scenario }) => {
+            const [isOpen, setIsOpen] = useState(false);
+            const [selectedAssetId, setSelectedAssetId] = useState('cash');
+            const asset = assets.find(a => a.id === selectedAssetId) || assets[0];
+            
+            if (!asset) return null; 
+
+            const start = asset.initialValue;
+            const contrib = asset.monthlyContribution * 12;
+            const scenarioFactor = SCENARIOS[scenario].factor;
+            let effectiveRate = asset.annualReturn * scenarioFactor;
+            
+            if (asset.isDynamicInterest) { 
+                if (start > 0) { 
+                    if (start <= 50000) effectiveRate = 0.05 * scenarioFactor; 
+                    else { 
+                        const baseInterest = 50000 * 0.0005; 
+                        const excessInterest = (start - 50000) * 0.0001; 
+                        effectiveRate = ((baseInterest + excessInterest) / start) * 100; 
+                    } 
+                } else effectiveRate = 0; 
+            }
+            
+            const interest = start * (effectiveRate / 100);
+            const subTotal = start + interest + contrib;
+            const tax = (payTaxFromAssets && asset.id === 'cash') ? projectedAnnualTax : 0;
+            const end = Math.max(0, subTotal - tax); 
+            const burned = (subTotal - tax) < 0;
+
+            return (
+                <div className="card-dark mb-6 text-sm overflow-hidden">
+                    <button onClick={() => setIsOpen(!isOpen)} className="w-full p-4 flex justify-between items-center hover:bg-slate-800 font-bold transition-colors text-white">
+                        <div className="flex items-center gap-2"><Icons.Search className="w-4 h-4 text-custom-green" /> Rechen-Lupe ({currentYear})</div>
+                        <div className="flex items-center gap-1 text-xs opacity-70 text-slate-400">{isOpen ? 'Einklappen' : 'Details'} {isOpen ? <Icons.ChevronUp className="w-4 h-4"/> : <Icons.ChevronDown className="w-4 h-4"/>}</div>
+                    </button>
+                    {isOpen && (
+                        <div className="p-4 bg-slate-900 animate-fade-in border-t border-slate-800">
+                            <div className="mb-4">
+                                <label className="block text-xs font-bold text-custom-green mb-1">Asset wählen:</label>
+                                <select value={selectedAssetId} onChange={(e) => setSelectedAssetId(e.target.value)} className="input-dark w-full p-2 rounded text-sm">
+                                    {assets.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 font-mono text-slate-300 text-sm">
+                                <div className="text-slate-500">Start:</div><div className="text-right">{formatCHF(start)}</div>
+                                <div className="text-slate-500">+ Zins/Rendite:</div><div className="text-right text-custom-green">+{formatCHF(interest)}</div>
+                                <div className="text-slate-500">+ Einzahlung:</div><div className="text-right text-custom-green">+{formatCHF(contrib)}</div>
+                                <div className="border-t border-slate-700 my-1 col-span-2"></div>
+                                <div className="text-slate-500">Subtotal:</div><div className="text-right">{formatCHF(subTotal)}</div>
+                                <div className="text-slate-500">- Steuer:</div><div className="text-right text-custom-pink">-{formatCHF(tax)}</div>
+                                <div className="border-t border-slate-600 my-1 col-span-2"></div>
+                                <div className="font-bold text-white">Ende:</div><div className={`text-right font-bold ${burned ? 'text-custom-pink' : 'text-white'}`}>{formatCHF(end)}</div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const GoalCalculator = ({ assets, forecastData, currentYear, goalYears, setGoalYears, goalAmount, setGoalAmount }) => {
+            const targetYear = currentYear + goalYears;
+            const goalData = forecastData.find(d => d.year === targetYear) || forecastData[forecastData.length - 1];
+            
+            const liquid = assets.filter(a => a.category !== 'retirement').reduce((s, a) => s + (goalData[a.id]||0), 0);
+            const pk = goalData['pk']||0;
+            const pillar3a = assets.filter(a => ['frankly', 'finpen_save', 'finpen_risky'].includes(a.id)).reduce((s, a) => s + (goalData[a.id]||0), 0);
+            
+            const hardEquity = liquid + pillar3a;
+            
+            const requiredHardEquity = goalAmount * 0.5; 
+            const propertyValue = goalAmount * 5; 
+            
+            const totalAvailable = hardEquity + pk;
+            const reached = totalAvailable >= goalAmount;
+            const hardReached = hardEquity >= requiredHardEquity;
+            
+            const missingTotal = Math.max(0, goalAmount - totalAvailable);
+            
+            const monthsLeft = goalYears * 12;
+            const extraMonthlySaving = missingTotal > 0 ? missingTotal / monthsLeft : 0;
+
+            return (
+                <div className="space-y-6">
+                    <div className="card-dark p-6 shadow-lg bg-slate-900 border-slate-800">
+                        <div className="flex gap-2 items-center mb-4"><Icons.Home className="w-6 h-6 text-custom-green" /><h2 className="text-xl font-bold text-white">Immobilien-Ziel: Eigenheim</h2></div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 text-sm">
+                            <div>
+                                <label className="block text-slate-400 mb-1">Geplanter Kauf in (Jahren)</label>
+                                <input type="range" min="1" max="15" value={goalYears} onChange={e => setGoalYears(parseInt(e.target.value))} className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-custom-pink" />
+                                <div className="flex justify-between text-xs text-slate-500 mt-1">
+                                    <span>Heute ({currentYear})</span>
+                                    <span className="text-custom-pink font-bold">{targetYear}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-slate-400 mb-1">Benötigte Eigenmittel (20%)</label>
+                                <div className="relative">
+                                    <input type="number" value={goalAmount} onChange={e => setGoalAmount(parseFloat(e.target.value))} className="input-dark w-full p-2 rounded text-white font-mono" />
+                                    <span className="absolute right-2 top-2 text-xs text-slate-500">~{formatCHF(propertyValue)} Objektwert</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-slate-800">
+                            <div className="flex justify-between items-end mb-2">
+                                <span className="text-sm text-slate-400">Verfügbares Kapital (Total):</span>
+                                <span className={`text-3xl font-bold ${reached ? 'text-custom-green' : 'text-orange-400'}`}>{formatCHF(totalAvailable)}</span>
+                            </div>
+                            
+                            <div className="relative w-full bg-slate-800 rounded-full h-6 overflow-hidden mb-1">
+                                <div className={`h-full transition-all duration-1000 ${reached ? 'bg-custom-green' : 'bg-orange-500'}`} style={{ width: `${Math.min((totalAvailable/goalAmount)*100, 100)}%` }}></div>
+                                <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white shadow-sm mix-blend-difference">
+                                    {((totalAvailable/goalAmount)*100).toFixed(1)}% des Ziels
+                                </div>
+                            </div>
+                            
+                            <p className="text-xs text-center text-slate-500 mt-2">
+                                {reached 
+                                    ? "🎉 Herzlichen Glückwunsch! Das Gesamtkapital reicht aus." 
+                                    : `⚠️ Es fehlen noch ${formatCHF(missingTotal)} am Gesamtkapital.`}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className={`p-4 rounded-xl border-2 ${hardReached ? 'border-custom-green bg-slate-900' : 'border-orange-500/50 bg-slate-900'}`}>
+                            <h3 className="font-bold text-slate-200 mb-3 flex items-center gap-2 text-sm uppercase tracking-wide">
+                                <Icons.Wallet className="w-4 h-4" /> Hartes Eigenkapital (Mind. 10%)
+                            </h3>
+                            <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-400">Benötigt (10%):</span>
+                                    <span className="font-mono font-medium text-white">{formatCHF(requiredHardEquity)}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-700 pb-2">
+                                    <span className="text-slate-400">Verfügbar (Cash + 3a):</span>
+                                    <span className={`font-mono font-bold ${hardReached ? 'text-custom-green' : 'text-orange-400'}`}>{formatCHF(hardEquity)}</span>
+                                </div>
+                                <div className="flex justify-between pt-1">
+                                    <span className="text-slate-400">Differenz:</span>
+                                    <span className={`font-mono ${hardReached ? 'text-custom-green' : 'text-custom-pink'}`}>
+                                        {hardReached ? '+' : '-'}{formatCHF(Math.abs(hardEquity - requiredHardEquity))}
+                                    </span>
+                                </div>
+                            </div>
+                            {!hardReached && (
+                                <div className="mt-3 bg-slate-800 p-2 rounded text-xs text-orange-400 border border-orange-900">
+                                    <strong>Achtung:</strong> Mindestens 10% "hartes" Geld (ohne PK) erforderlich.
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="card-dark p-4">
+                            <h3 className="font-bold text-slate-200 mb-3 flex items-center gap-2 text-sm uppercase tracking-wide">
+                                <Icons.TrendingUp className="w-4 h-4" /> Sparplan-Check
+                            </h3>
+                            <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-400">Pensionskasse (projiziert):</span>
+                                    <span className="font-mono text-blue-400">{formatCHF(pk)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-400">Säule 3a (projiziert):</span>
+                                    <span className="font-mono text-custom-green">{formatCHF(pillar3a)}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-700 pb-2">
+                                    <span className="text-slate-400">Freies Vermögen:</span>
+                                    <span className="font-mono text-purple-400">{formatCHF(liquid)}</span>
+                                </div>
+                                
+                                {missingTotal > 0 && (
+                                    <div className="mt-3 pt-2 border-t border-slate-700">
+                                        <p className="text-xs text-slate-500 mb-1">Lücke schliessen:</p>
+                                        <div className="flex justify-between items-center bg-slate-800 p-2 rounded text-blue-300 border border-slate-700">
+                                            <span className="text-xs font-bold">Zusätzlich sparen:</span>
+                                            <span className="font-mono font-bold text-sm">{formatCHF(extraMonthlySaving)} / Mt.</span>
+                                        </div>
+                                    </div>
+                                )}
+                                {missingTotal <= 0 && hardReached && (
+                                    <div className="mt-3 p-2 bg-green-900/20 text-custom-green border border-green-900 rounded text-xs text-center font-bold">
+                                        Du bist auf Kurs! 🎉
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const JournalRow = ({ row, assets, saveHistoryYear, projectedAnnualTax, currentYear }) => {
+            const [isEditing, setIsEditing] = useState(false);
+            const [vals, setVals] = useState({});
+            const [tax, setTax] = useState(0);
+
+            const startEdit = () => {
+                const v = {}; assets.forEach(a => v[a.id] = row[a.id] || 0);
+                setVals(v); setTax(row.taxPaid || projectedAnnualTax); setIsEditing(true);
+            };
+            const save = () => { saveHistoryYear(row.year, vals, tax); setIsEditing(false); };
+
+            if (isEditing) return (
+                <tr className="bg-slate-800 border-b border-slate-700">
+                    <td className="p-4 font-bold align-top text-white">{row.year}</td>
+                    <td className="p-4 align-top"><span className="text-custom-pink font-bold text-xs">Bearbeiten...</span></td>
+                    <td className="p-4">
+                        <div className="grid grid-cols-2 gap-2">
+                            {assets.map(a => (
+                                <div key={a.id}>
+                                    <label className="text-[10px] text-slate-400 block truncate">{a.name}</label>
+                                    <input type="number" value={vals[a.id]} onChange={e => setVals({...vals, [a.id]: parseFloat(e.target.value)||0})} className="input-dark w-full p-1 rounded text-right text-xs" />
+                                </div>
+                            ))}
+                            <div className="col-span-2 mt-2 pt-2 border-t border-slate-700">
+                                <label className="text-[10px] font-bold text-slate-400">Steuern bezahlt:</label>
+                                <input type="number" value={tax} onChange={e => setTax(parseFloat(e.target.value)||0)} className="input-dark w-full p-1 rounded text-right text-xs font-bold" />
+                            </div>
+                        </div>
+                    </td>
+                    <td className="p-4 text-center align-top">
+                        <button onClick={save} className="bg-custom-green text-slate-900 font-bold p-1.5 rounded text-xs w-full mb-1">Save</button>
+                        <button onClick={() => setIsEditing(false)} className="text-slate-400 text-xs hover:text-white">Cancel</button>
+                    </td>
+                </tr>
+            );
+
+            const isFuture = row.year >= currentYear;
+            return (
+                <tr className={`border-b border-slate-800 hover:bg-slate-800/50 transition-colors ${row.isActual ? 'bg-green-900/10' : ''} ${isFuture ? 'opacity-50' : ''}`}>
+                    <td className="p-4 font-mono text-white">{row.year} {row.year === currentYear && <span className="text-[10px] bg-custom-pink text-slate-900 px-1 rounded font-bold">PLAN</span>}</td>
+                    <td className="p-4 text-xs">
+                        {row.isActual ? <span className="text-custom-green flex gap-1 items-center"><Icons.CheckCircle className="w-3 h-3"/> Ist-Daten</span> : (isFuture ? 'Prognose' : '-')}
+                    </td>
+                    <td className="p-4 text-right font-mono font-medium text-white">{formatCHF(row.total)}</td>
+                    <td className="p-4 text-center">
+                        {!isFuture && <button onClick={startEdit} className="text-slate-400 hover:text-white p-2 rounded hover:bg-slate-700"><Icons.Edit3 className="w-4 h-4"/></button>}
+                    </td>
+                </tr>
+            );
+        };
+
+        const SwissFiApp = () => {
+            const currentYear = 2026; 
+            const historyStartYear = 2023; 
+            const retirementYear = 2061;
+            const yearsToSimulate = retirementYear - historyStartYear;
+
+            const DEFAULT_ASSETS = [
+                { id: 'pk', name: 'Pensionskasse', initialValue: 20355, monthlyContribution: 436, annualReturn: 3.2, color: '#3b82f6', category: 'retirement' },
+                { id: 'frankly', name: 'Frankly 3a', initialValue: 520, monthlyContribution: 200, annualReturn: 4.5, color: '#10b981', category: 'retirement' },
+                { id: 'finpen_save', name: 'Finpension 3a Save', initialValue: 3500, monthlyContribution: 50, annualReturn: 4.5, color: '#22c55e', category: 'retirement' },
+                { id: 'finpen_risky', name: 'Finpension 3a Risky', initialValue: 815, monthlyContribution: 50, annualReturn: 8.0, color: '#84cc16', category: 'retirement' },
+                { id: 'cash', name: 'Sparkonto', initialValue: 12000, monthlyContribution: 250, annualReturn: 0.05, color: '#94a3b8', category: 'liquid', isDynamicInterest: true },
+                { id: 'stocks', name: 'ETF/Aktien', initialValue: 5000, monthlyContribution: 800, annualReturn: 6.0, color: '#a855f7', category: 'liquid' },
+                { id: 'crypto', name: 'Krypto', initialValue: 1000, monthlyContribution: 50, annualReturn: 8.0, color: '#f97316', category: 'speculative' },
+                { id: 'gold', name: 'Gold', initialValue: 3000, monthlyContribution: 50, annualReturn: 2.5, color: '#eab308', category: 'liquid' },
+            ];
+
+            const [assets, setAssets] = useState(() => safeJSONParse('swissfi_assets', DEFAULT_ASSETS));
+            const [history, setHistory] = useState(() => safeJSONParse('swissfi_history', []));
+            const [goalYears, setGoalYears] = useState(() => safeJSONParse('swissfi_goalYears', 5));
+            const [goalAmount, setGoalAmount] = useState(() => safeJSONParse('swissfi_goalAmount', 160000));
+            const [projectedAnnualTax, setProjectedAnnualTax] = useState(() => safeJSONParse('swissfi_projectedAnnualTax', 8000));
+            const [payTaxFromAssets, setPayTaxFromAssets] = useState(() => safeJSONParse('swissfi_payTaxFromAssets', false));
+            const [marginalTaxRate, setMarginalTaxRate] = useState(() => safeJSONParse('swissfi_marginalTaxRate', 22.0));
+            const [rebalanceRules, setRebalanceRules] = useState(() => safeJSONParse('swissfi_rebalanceRules', []));
+            const [scenario, setScenario] = useState('standard');
+            const [comparisonType, setComparisonType] = useState('none'); 
+            const [visibleAssets, setVisibleAssets] = useState({}); 
+            const [chartStartYear, setChartStartYear] = useState(historyStartYear);
+            const [chartEndYear, setChartEndYear] = useState(retirementYear);
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [hoveredYear, setHoveredYear] = useState(currentYear);
+            const fileInputRef = useRef(null);
+
+            useEffect(() => { localStorage.setItem('swissfi_assets', JSON.stringify(assets)); }, [assets]);
+            useEffect(() => { localStorage.setItem('swissfi_history', JSON.stringify(history)); }, [history]);
+            useEffect(() => { localStorage.setItem('swissfi_goalYears', goalYears); }, [goalYears]);
+            useEffect(() => { localStorage.setItem('swissfi_goalAmount', goalAmount); }, [goalAmount]);
+            useEffect(() => { localStorage.setItem('swissfi_projectedAnnualTax', projectedAnnualTax); }, [projectedAnnualTax]);
+            useEffect(() => { localStorage.setItem('swissfi_payTaxFromAssets', payTaxFromAssets); }, [payTaxFromAssets]);
+            useEffect(() => { localStorage.setItem('swissfi_marginalTaxRate', marginalTaxRate); }, [marginalTaxRate]);
+            useEffect(() => { localStorage.setItem('swissfi_rebalanceRules', JSON.stringify(rebalanceRules)); }, [rebalanceRules]);
+            useEffect(() => { const initialVisibility = {}; assets.forEach(a => initialVisibility[a.id] = true); setVisibleAssets(initialVisibility); }, []);
+            
+            const toggleAssetVisibility = (id) => { setVisibleAssets(prev => ({...prev, [id]: !prev[id]})); };
+            const handleAssetChange = (id, field, value) => { setAssets(prev => prev.map(a => a.id === id ? { ...a, [field]: value } : a)); };
+            const hardReset = () => { if(confirm("Achtung: Dies löscht alle lokalen Daten unwiderruflich! Fortfahren?")) { localStorage.clear(); window.location.reload(); } };
+
+            const baseConfig = { currentYear, historyStartYear, yearsToSimulate, payTaxFromAssets, projectedAnnualTax, marginalTaxRate, rebalanceRules, scenario };
+            const forecastData = useMemo(() => runSimulation(assets, history, baseConfig), [assets, history, baseConfig]);
+            const comparisonData = useMemo(() => {
+                if (comparisonType === 'none') return null;
+                let compConfig = { ...baseConfig };
+                if (comparisonType === 'conservative') compConfig.scenario = 'conservative';
+                if (comparisonType === 'optimistic') compConfig.scenario = 'optimistic';
+                if (comparisonType === 'no_rules') compConfig.rebalanceRules = [];
+                return runSimulation(assets, history, compConfig);
+            }, [assets, history, baseConfig, comparisonType]);
+
+            const mergedChartData = useMemo(() => forecastData.map((item, idx) => ({ ...item, comparisonTotal: comparisonData ? comparisonData[idx].total : null })), [forecastData, comparisonData]);
+            
+            const projectedTotal = forecastData[forecastData.length - 1]?.total || 0;
+            const projectedPK = forecastData[forecastData.length - 1]?.pk || 0;
+            const visibleForecastData = mergedChartData.filter(d => d.year >= chartStartYear && d.year <= chartEndYear);
+            const currentTotal = forecastData.find(d => d.year === currentYear)?.total || 0;
+            const totalMonthlySavings = assets.reduce((sum, a) => sum + a.monthlyContribution, 0);
+            const distributionData = forecastData.find(d => d.year === hoveredYear) || { year: currentYear };
+            const distributionTotal = distributionData.total || 1;
+
+            const saveHistoryYear = (year, values, tax) => { setHistory(prev => [...prev.filter(h => h.year !== year), { year, isActual: true, values, taxPaid: tax }]); };
+            const importFromJournal = () => { const record = history.find(h => h.year === currentYear - 1); if (record) { setAssets(prev => prev.map(a => ({ ...a, initialValue: record.values[a.id] || 0 }))); alert(`Werte aus ${currentYear - 1} übernommen.`); } else alert(`Keine Daten für ${currentYear - 1}.`); };
+            const handleExport = () => { const blob = new Blob([JSON.stringify({ assets, history, goalYears, goalAmount, projectedAnnualTax, payTaxFromAssets, marginalTaxRate, rebalanceRules }, null, 2)], {type: "application/json"}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `swissfi_backup.json`; a.click(); };
+            const handleImportFile = (e) => { const reader = new FileReader(); reader.onload = (ev) => { try { const d = JSON.parse(ev.target.result); if (d.assets) setAssets(d.assets); if (d.history) setHistory(d.history); if (d.payTaxFromAssets !== undefined) setPayTaxFromAssets(d.payTaxFromAssets); if (d.marginalTaxRate !== undefined) setMarginalTaxRate(d.marginalTaxRate); if (d.rebalanceRules !== undefined) setRebalanceRules(d.rebalanceRules); alert('Import erfolgreich.'); } catch(err) { alert('Fehler.'); } }; if(e.target.files[0]) reader.readAsText(e.target.files[0]); };
+            
+            // New: Export Forecast Data
+            const handleExportForecast = () => {
+                const blob = new Blob([JSON.stringify(visibleForecastData, null, 2)], {type: "application/json"});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `swissfi_forecast_${chartStartYear}-${chartEndYear}.json`; a.click();
+            };
+
+            const renderJournal = () => (
+                <div className="card-dark overflow-hidden">
+                    <div className="p-4 bg-slate-900 border-b border-slate-700 text-sm text-custom-pink flex gap-2 font-bold">
+                        <Icons.Edit3 className="w-5 h-5" />
+                        <p>Manuelle Korrektur (Ist-Daten)</p>
+                    </div>
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-slate-900 font-semibold text-slate-500">
+                            <tr><th className="p-4">Jahr</th><th className="p-4">Status</th><th className="p-4 text-right">Total</th><th className="p-4 text-center">Edit</th></tr>
+                        </thead>
+                        <tbody>
+                            {forecastData.filter(d => d.year < currentYear + 3).map(row => (
+                                <JournalRow key={row.year} row={row} assets={assets} saveHistoryYear={saveHistoryYear} projectedAnnualTax={projectedAnnualTax} currentYear={currentYear} />
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            );
+
+            const CustomLegend = () => (
+                <div className="flex flex-wrap gap-2 mt-4 justify-center">
+                    {assets.map(asset => (
+                        <div key={asset.id} onClick={() => toggleAssetVisibility(asset.id)} className={`cursor-pointer flex items-center gap-1.5 px-2 py-1 rounded border text-xs transition-all ${visibleAssets[asset.id] ? 'bg-slate-800 border-slate-600' : 'bg-slate-900 border-transparent opacity-40'}`}>
+                            <div className={`w-3 h-3 rounded-full`} style={{backgroundColor: visibleAssets[asset.id] ? asset.color : '#666'}}></div>
+                            <span className="text-slate-300 font-medium">{asset.name}</span>
+                        </div>
+                    ))}
+                </div>
+            );
+
+            if (!assets || assets.length === 0) return <div className="p-10 text-center text-white"><button onClick={hardReset} className="bg-red-600 text-white p-2 rounded">Notfall Reset</button></div>;
+
+            return (
+                <div className="max-w-6xl mx-auto p-4 md:p-6 font-sans">
+                    <header className="mb-8 flex flex-col md:flex-row justify-between gap-4">
+                        <div><h1 className="text-2xl font-bold text-white flex items-center gap-2"><Icons.Calculator className="text-custom-pink" /> SwissFi Simulator 6.6</h1><p className="text-slate-500 text-sm">Finanzplanung für Fortgeschrittene.</p></div>
+                        <div className="flex gap-2 items-center">
+                            <select value={scenario} onChange={e => setScenario(e.target.value)} className="input-dark p-2 rounded text-sm">{Object.values(SCENARIOS).map(s => <option key={s.id} value={s.id}>{s.label}</option>)}</select>
+                            <button onClick={handleExport} className="p-2 border border-slate-700 text-slate-400 rounded hover:bg-slate-800 hover:text-white transition-colors"><Icons.Download className="w-4 h-4" /></button>
+                            <button onClick={() => fileInputRef.current.click()} className="p-2 bg-slate-800 text-white rounded hover:bg-slate-700 border border-slate-700"><Icons.Upload className="w-4 h-4" /></button>
+                            <button onClick={hardReset} className="p-2 bg-red-900/20 text-red-500 rounded hover:bg-red-900/40 border border-red-900/30" title="Komplett-Reset"><Icons.Trash className="w-4 h-4" /></button>
+                            <input type="file" ref={fileInputRef} onChange={handleImportFile} className="hidden" accept=".json" />
+                        </div>
+                    </header>
+                    <div className="flex gap-2 mb-6 overflow-x-auto pb-2">{[['dashboard', 'Plan-Daten', Icons.Settings], ['journal', 'Journal', Icons.Edit3], ['goal', 'Ziel: Eigenheim', Icons.Home], ['prognose', 'Prognose', Icons.TrendingUp]].map(([id, label, Icon]) => (<button key={id} onClick={() => setActiveTab(id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all duration-300 border ${activeTab === id ? 'bg-custom-pink text-slate-900 border-custom-pink' : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-white'}`}><Icon className="w-4 h-4" /> {label}</button>))}</div>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 space-y-6">
+                            {activeTab === 'dashboard' && (
+                                <>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="card-dark p-4 flex flex-col justify-center border-custom-green"><div className="flex items-center gap-2 mb-1"><Icons.PiggyBank className="w-5 h-5 text-custom-green" /><span className="text-xs font-bold text-custom-green uppercase tracking-wide">Spar-Power</span></div><span className="text-2xl font-bold text-white">{formatCHF(totalMonthlySavings * 12)} <span className="text-sm font-normal text-slate-400">pro Jahr</span></span></div>
+                                        <div className="card-dark p-4 flex flex-col gap-3 justify-center">
+                                            <div className="flex justify-between items-center"><h3 className="font-bold text-slate-200 flex gap-2 items-center"><Icons.Landmark className="w-4 h-4" /> Steuern</h3></div>
+                                            <div className="text-xs text-slate-400 space-y-2">
+                                                <div className="mb-2"><label className="block text-xs text-slate-500 mb-1">Steuerlast p.a. (CHF)</label><input type="number" value={projectedAnnualTax} onChange={e => setProjectedAnnualTax(parseFloat(e.target.value)||0)} className="input-dark w-full p-2 rounded font-mono" /></div>
+                                                <div className="flex items-center gap-2"><input type="checkbox" id="payTaxCheckbox" checked={payTaxFromAssets} onChange={e => setPayTaxFromAssets(e.target.checked)} className="w-4 h-4 accent-custom-pink rounded" /><label htmlFor="payTaxCheckbox" className="font-medium text-slate-300 cursor-pointer">Steuern vom Sparkonto zahlen?</label></div>
+                                                {payTaxFromAssets && (<div className="pl-6 animate-fade-in"><div className="flex justify-between items-center mb-1"><label className="text-slate-400">Grenzsteuersatz:</label><input type="number" value={marginalTaxRate} onChange={e => setMarginalTaxRate(parseFloat(e.target.value)||0)} className="input-dark p-1 rounded w-16 text-right font-mono text-xs" step="0.5" /><span className="ml-1">%</span></div></div>)}
+                                                <button onClick={importFromJournal} className="text-xs bg-slate-800 text-blue-400 px-2 py-1 rounded hover:bg-slate-700 w-full flex justify-center gap-1 items-center mt-2 border border-slate-700"><Icons.ArrowDownCircle className="w-3 h-3" /> Werte aus {currentYear-1} laden</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <RulesManager rules={rebalanceRules} setRules={setRebalanceRules} assets={assets} />
+                                    <CalculationInspector assets={assets} currentYear={currentYear} payTaxFromAssets={payTaxFromAssets} projectedAnnualTax={projectedAnnualTax} scenario={scenario} />
+                                    <div>{assets.map(asset => (<AssetInputRow key={asset.id} asset={asset} currentYear={currentYear} onChange={handleAssetChange} scenario={scenario} />))}</div>
+                                </>
+                            )}
+                            {activeTab === 'journal' && renderJournal()}
+                            {activeTab === 'goal' && <GoalCalculator assets={assets} forecastData={forecastData} currentYear={currentYear} goalYears={goalYears} setGoalYears={setGoalYears} goalAmount={goalAmount} setGoalAmount={setGoalAmount} />}
+                            {activeTab === 'prognose' && (
+                                <div className="space-y-6">
+                                    <div className="card-dark p-6">
+                                        <div className="flex flex-col md:flex-row justify-between mb-4 gap-4">
+                                            <div><h3 className="font-bold text-white flex items-center gap-2"><Icons.Layers className="w-4 h-4 text-custom-pink"/> Vermögensentwicklung</h3><div className="flex gap-2 text-xs items-center mt-2 text-slate-400"><span>Zeitraum:</span><input type="number" value={chartStartYear} onChange={e => setChartStartYear(Number(e.target.value))} className="input-dark p-1 w-16 text-center rounded" /><span>bis</span><input type="number" value={chartEndYear} onChange={e => setChartEndYear(Number(e.target.value))} className="input-dark p-1 w-16 text-center rounded" /></div></div>
+                                            <div className="flex gap-2 items-end">
+                                                <button onClick={handleExportForecast} className="mb-0.5 p-1.5 border border-slate-700 text-slate-400 rounded hover:bg-slate-800 hover:text-white transition-colors" title="Chart-Daten als JSON exportieren"><Icons.Download className="w-5 h-5" /></button>
+                                                <div className="flex flex-col gap-1 items-end"><label className="text-xs font-bold text-slate-500">Vergleich:</label><select value={comparisonType} onChange={e => setComparisonType(e.target.value)} className="input-dark rounded p-1 text-sm w-48"><option value="none">Kein Vergleich</option><option value="conservative">vs. Konservativ</option><option value="optimistic">vs. Optimistisch</option><option value="no_rules">vs. Ohne Regeln</option></select></div>
+                                            </div>
+                                        </div>
+                                        <div className="h-[400px] w-full">
+                                            <ResponsiveContainer>
+                                                <ComposedChart key={scenario+chartStartYear+comparisonType} data={visibleForecastData} margin={{top:10, right:30, left:0, bottom:0}} onMouseMove={(e) => { if (e && e.activeLabel) setHoveredYear(e.activeLabel); }} onMouseLeave={() => setHoveredYear(currentYear)}>
+                                                    <defs>{assets.map(a => <linearGradient key={a.id} id={`c_${a.id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={a.color} stopOpacity={0.8}/><stop offset="95%" stopColor={a.color} stopOpacity={0}/></linearGradient>)}</defs>
+                                                    <XAxis dataKey="year" fontSize={12} stroke="#64748b" /> <YAxis tickFormatter={val => `${(val/1000).toFixed(0)}k`} fontSize={12} width={60} stroke="#64748b" /> <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" /> <Tooltip contentStyle={{backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff'}} formatter={val => formatCHF(val)} />
+                                                    {assets.map(a => visibleAssets[a.id] && (<Area key={a.id} type="monotone" dataKey={a.id} stackId="1" stroke={a.color} fill={`url(#c_${a.id})`} name={a.name} />))}
+                                                    {comparisonType !== 'none' && (<Line type="monotone" dataKey="comparisonTotal" stroke="#fff" strokeWidth={2} strokeDasharray="5 5" dot={false} name={`Total (${comparisonType})`} />)}
+                                                </ComposedChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                        <CustomLegend />
+                                    </div>
+                                    <div className="card-dark p-6">
+                                        <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Icons.PiggyBank className="w-4 h-4 text-custom-green"/> Steuerersparnis (3a)</h3>
+                                        <div className="h-[200px] w-full">
+                                            <ResponsiveContainer>
+                                                <AreaChart data={visibleForecastData} margin={{top:10, right:30, left:0, bottom:0}}>
+                                                    <defs><linearGradient id="colorTax" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="rgb(0, 204, 51)" stopOpacity={0.8}/><stop offset="95%" stopColor="rgb(0, 204, 51)" stopOpacity={0}/></linearGradient></defs>
+                                                    <XAxis dataKey="year" fontSize={12} stroke="#64748b" /><YAxis tickFormatter={val => `${(val/1000).toFixed(0)}k`} fontSize={12} width={60} stroke="#64748b" />
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" /><Tooltip contentStyle={{backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff'}} formatter={val => formatCHF(val)} labelStyle={{color: 'rgb(0, 204, 51)'}} />
+                                                    <Area type="monotone" dataKey="accTaxSavings" stroke="rgb(0, 204, 51)" fill="url(#colorTax)" name="Gesparte Steuern" />
+                                                </AreaChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <div className="lg:col-span-1 space-y-6">
+                            <div className="card-dark p-6 sticky top-6">
+                                <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-4">Stand Ende {currentYear}</h3>
+                                <div className="mb-6"><span className="block text-3xl font-bold text-white">{formatCHF(currentTotal)}</span><span className="text-sm text-slate-500">Prognose Total</span></div>
+                                <div className="border-t pt-4 border-slate-800"><h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-2">Prognose 2061</h3><span className="block text-2xl font-bold text-custom-pink">{formatCHF(projectedTotal)}</span><div className="mt-2 p-2 bg-slate-900 border border-slate-800 text-blue-400 text-xs rounded">PK-Check: <strong>{formatCHF(projectedPK)}</strong><br/>(Ziel: 479k)</div><div className="mt-2 text-xs text-slate-600">Szenario: {SCENARIOS[scenario].label}</div></div>
+                                <div className="mt-6 pt-6 border-t border-slate-800">
+                                    <h4 className="text-xs font-bold text-slate-600 uppercase mb-3">Verteilung ({hoveredYear})</h4>
+                                    <div className="space-y-2">{assets.map(asset => (<div key={asset.id} className="flex items-center justify-between text-sm"><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: asset.color }}></div><span className="text-slate-400 truncate max-w-[120px]">{asset.name}</span></div><span className="font-mono text-white">{distributionTotal > 0 ? (((distributionData[asset.id] || 0) / distributionTotal) * 100).toFixed(1) : '0.0'}%</span></div>))}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<SwissFiApp />);
+    </script>
+</body>
+</html>
