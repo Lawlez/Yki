@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gaijin Japanese Buddy</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Hide scrollbar for category menu but keep functionality */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body {
+            background-color: #f8fafc; /* slate-50 */
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+</head>
+<body class="text-slate-800 font-sans sm:pb-8">
+
+    <!-- Mobile Wrapper -->
+    <div class="max-w-md mx-auto bg-white min-h-screen sm:min-h-[90vh] sm:mt-8 sm:rounded-3xl sm:shadow-2xl sm:overflow-hidden relative flex flex-col">
+        
+        <!-- Header -->
+        <header class="bg-red-600 text-white pt-12 pb-6 px-6 rounded-b-3xl shadow-md z-10 relative">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-black tracking-tight flex items-center gap-2">
+                        <span class="text-3xl">🇯🇵</span> Gaijin Buddy
+                    </h1>
+                    <p class="text-red-100 text-sm mt-1 font-medium">Your Swiss-Japanese survival kit</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Categories Horizontal Scroll -->
+        <div class="bg-white sticky top-0 z-0 pt-4 pb-2 shadow-sm">
+            <div id="category-container" class="flex overflow-x-auto hide-scrollbar px-4 gap-2 pb-2">
+                <!-- Categories injected here by JS -->
+            </div>
+        </div>
+
+        <!-- Phrase List -->
+        <div id="phrase-list" class="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
+            <!-- Phrases injected here by JS -->
+        </div>
+
+    </div>
+
+    <script>
+        // --- DATA ---
+        const dictionary = [
+            // --- BASICS & YES/NO ---
+            { id: 1, category: 'Basics', en: 'Yes (Formal)', romaji: 'Hai', kana: 'はい', formality: 'Formal' },
+            { id: 2, category: 'Basics', en: 'Yes / Yeah (Casual)', romaji: 'Un', kana: 'うん', formality: 'Informal' },
+            { id: 3, category: 'Basics', en: 'No (Formal)', romaji: 'Iie', kana: 'いいえ', formality: 'Formal' },
+            { id: 4, category: 'Basics', en: 'No / Nah (Casual)', romaji: 'Uun', kana: 'ううん', formality: 'Informal' },
+            { id: 5, category: 'Basics', en: 'Thank you (Formal)', romaji: 'Arigatou gozaimasu', kana: 'ありがとうございます', formality: 'Formal' },
+            { id: 6, category: 'Basics', en: 'Thank you (Casual)', romaji: 'Arigatou!', kana: 'ありがとう！', formality: 'Informal' },
+            { id: 'b_doumo', category: 'Basics', en: 'Thank you (polite and short)', romaji: 'Doumo', kana: 'どうも', formality: 'Formal' },
+            { id: 7, category: 'Basics', en: 'Excuse me / Sorry', romaji: 'Sumimasen.', kana: 'すみません。', formality: 'Formal' },
+            { id: 'b_sumichotto', category: 'Basics', en: 'Sorry, it is a little (inconvenient)', romaji: 'Sumimasen, chotto.', kana: 'すみません、ちょっと。', formality: 'Formal' },
+            { id: 8, category: 'Basics', en: 'A little', romaji: 'Chotto', kana: 'ちょっと', formality: 'Both' },
+            { id: 9, category: 'Basics', en: 'Not at all / Completely fine', romaji: 'Zenzen', kana: 'ぜんぜん', formality: 'Both' },
+            { id: 10, category: 'Basics', en: 'I agree / That is right', romaji: 'Sou desu ne.', kana: 'そうですね。', formality: 'Formal' },
+            { id: 'b_soudesu', category: 'Basics', en: 'That\'s right.', romaji: 'Sou desu.', kana: 'そうです。', formality: 'Formal' },
+            { id: 11, category: 'Basics', en: 'I disagree / That is wrong', romaji: 'Chigaimasu', kana: 'ちがいます', formality: 'Formal' },
+            { id: 'b_wakarimashita', category: 'Basics', en: 'I understand', romaji: 'Wakarimashita', kana: 'わかりました', formality: 'Formal' },
+            { id: 'b_wakarimasen', category: 'Basics', en: 'Sorry, I didn\'t understand', romaji: 'Sumimasen, wakarimasen deshita', kana: 'すみません、わかりませんでした', formality: 'Formal' },
+            { id: 'b_omachi', category: 'Basics', en: 'Please wait a moment (You will hear this)', romaji: 'Shoushou omachi kudasai', kana: '少々お待ちください (しょうしょう おまち ください)', formality: 'Formal' },
+            { id: 'b_ii', category: 'Basics', en: 'Good', romaji: 'Ii', kana: 'いい', formality: 'Both' },
+            { id: 'b_iidesune', category: 'Basics', en: 'That\'s good, isn\'t it? / Sounds good.', romaji: 'Ii desu ne.', kana: 'いいですね。', formality: 'Formal' },
+            { id: 'b_douzo', category: 'Basics', en: 'Here you go; please', romaji: 'Douzo', kana: 'どうぞ', formality: 'Formal' },
+            { id: 'b_nihon', category: 'Basics', en: 'Japan', romaji: 'Nihon', kana: '日本 (にほん)', formality: 'Both' },
+            { id: 'b_sensei', category: 'Basics', en: 'Teacher; Professor', romaji: 'Sensei', kana: '先生 (せんせい)', formality: 'Formal' },
+
+            // --- NUMBERS ---
+            { id: 'n_0', category: 'Numbers', en: 'Zero', romaji: 'Zero / Rei', kana: 'ゼロ / れい', formality: 'Both' },
+            { id: 'n_1', category: 'Numbers', en: 'One', romaji: 'Ichi', kana: '一 (いち)', formality: 'Both' },
+            { id: 'n_2', category: 'Numbers', en: 'Two', romaji: 'Ni', kana: '二 (に)', formality: 'Both' },
+            { id: 'n_3', category: 'Numbers', en: 'Three', romaji: 'San', kana: '三 (さん)', formality: 'Both' },
+            { id: 'n_4', category: 'Numbers', en: 'Four', romaji: 'Yon / Shi', kana: '四 (よん / し)', formality: 'Both' },
+            { id: 'n_5', category: 'Numbers', en: 'Five', romaji: 'Go', kana: '五 (ご)', formality: 'Both' },
+            { id: 'n_6', category: 'Numbers', en: 'Six', romaji: 'Roku', kana: '六 (ろく)', formality: 'Both' },
+            { id: 'n_7', category: 'Numbers', en: 'Seven', romaji: 'Nana / Shichi', kana: '七 (なな / しち)', formality: 'Both' },
+            { id: 'n_8', category: 'Numbers', en: 'Eight', romaji: 'Hachi', kana: '八 (はち)', formality: 'Both' },
+            { id: 'n_9', category: 'Numbers', en: 'Nine', romaji: 'Kyuu / Ku', kana: '九 (きゅう / く)', formality: 'Both' },
+            { id: 'n_10', category: 'Numbers', en: 'Ten', romaji: 'Juu', kana: '十 (じゅう)', formality: 'Both' },
+
+            // --- GREETINGS ---
+            { id: 12, category: 'Greetings', en: 'Hello / Good afternoon', romaji: 'Konnichiwa', kana: 'こんにちは', formality: 'Both' },
+            { id: 13, category: 'Greetings', en: 'Good morning (Formal)', romaji: 'Ohayou gozaimasu', kana: 'おはようございます', formality: 'Formal' },
+            { id: 'g_ohayou', category: 'Greetings', en: 'Good morning (Informal)', romaji: 'Ohayou.', kana: 'おはよう。', formality: 'Informal' },
+            { id: 14, category: 'Greetings', en: 'Good evening', romaji: 'Konbanwa', kana: 'こんばんは', formality: 'Both' },
+            { id: 15, category: 'Greetings', en: 'Goodbye', romaji: 'Sayounara', kana: 'さようなら', formality: 'Both' },
+            { id: 'g_shitsurei', category: 'Greetings', en: 'Goodbye; sorry. (leaving a room/ending call)', romaji: 'Shitsurei shimasu.', kana: '失礼します。(しつれいします)', formality: 'Formal' },
+
+            // --- INTRODUCTIONS ---
+            { id: 'i_full', category: 'Introductions', en: 'COMPLETE INTRO: Nice to meet you. I am [Name]. I came from Switzerland. I am a student. Pleased to meet you.', romaji: 'Hajimemashite. Watashi wa [Name] desu. Suisu kara kimashita. Gakusei desu. Douzo yoroshiku.', kana: 'はじめまして。私は [Name] です。スイスから来ました。学生です。どうぞよろしく。', formality: 'Formal' },
+            { id: 16, category: 'Introductions', en: 'Nice to meet you', romaji: 'Hajimemashite', kana: 'はじめまして', formality: 'Formal' },
+            { id: 'i_douzo', category: 'Introductions', en: 'Pleased to meet you', romaji: 'Douzo yoroshiku.', kana: 'どうぞよろしく。', formality: 'Formal' },
+            { id: 'i_watashi', category: 'Introductions', en: 'I / Me (Standard)', romaji: 'Watashi', kana: '私 (わたし)', formality: 'Both' },
+            { id: 'i_ore', category: 'Introductions', en: 'I / Me (Strongly masculine)', romaji: 'Ore', kana: '俺 (おれ)', formality: 'Informal' },
+            { id: 18, category: 'Introductions', en: 'I am [Name]', romaji: 'Watashi wa [Name] desu', kana: '私は [Name] です', formality: 'Formal' },
+            { id: 17, category: 'Introductions', en: 'We are from Switzerland', romaji: 'Suisu kara kimashita', kana: 'スイスから来ました', formality: 'Formal' },
+            { id: 'i_beginner', category: 'Introductions', en: 'I am a beginner at Japanese', romaji: 'Nihongo no shoshinsha desu', kana: '日本語の初心者です (にほんごの しょしんしゃ です)', formality: 'Formal' },
+            { id: 'i_not_good', category: 'Introductions', en: 'My Japanese is not good', romaji: 'Nihongo ga amari hanasemasen', kana: '日本語があまり話せません (にほんごが あまり はなせません)', formality: 'Formal' },
+            { id: 'i_learning', category: 'Introductions', en: 'I am still learning', romaji: 'Mada benkyouchuu desu', kana: 'まだ勉強中です (まだ べんきょうちゅう です)', formality: 'Formal' },
+            { id: 'i_gakusei', category: 'Introductions', en: 'Student', romaji: 'Gakusei', kana: '学生 (がくせい)', formality: 'Both' },
+            { id: 'i_daigakusei', category: 'Introductions', en: 'University student', romaji: 'Daigakusei', kana: '大学生 (だいがくせい)', formality: 'Both' },
+            { id: 'i_kaishain', category: 'Introductions', en: 'Company employee', romaji: 'Kaishain', kana: '会社員 (かいしゃいん)', formality: 'Both' },
+            { id: 'i_job_it', category: 'Introductions', en: 'I work in IT', romaji: 'IT no shigoto o shite imasu', kana: 'ITの仕事をしています (アイティー の しごと を しています)', formality: 'Formal' },
+            { id: 'i_prog', category: 'Introductions', en: 'Programming', romaji: 'Puroguramingu', kana: 'プログラミング', formality: 'Both' },
+            { id: 'i_cyber', category: 'Introductions', en: 'Cyber Security', romaji: 'Saibaa sekyuriti', kana: 'サイバーセキュリティ', formality: 'Both' },
+            { id: 'i_hacker', category: 'Introductions', en: 'I am a hacker (Say this playfully!)', romaji: 'Watashi wa hakkaa desu', kana: '私はハッカーです (わたし は ハッカー です)', formality: 'Informal' },
+            { id: 19, category: 'Introductions', en: 'Please treat me well (Essential ending)', romaji: 'Yoroshiku onegaishimasu', kana: 'よろしくおねがいします', formality: 'Formal' },
+            { id: 20, category: 'Introductions', en: 'Do you speak English?', romaji: 'Eigo o hanashimasu ka?', kana: '英語を話しますか？ (えいご を はなします か)', formality: 'Formal' },
+
+            // --- QUESTIONS ---
+            { id: 21, category: 'Questions', en: 'Where is the toilet?', romaji: 'Toire wa doko desu ka?', kana: 'トイレはどこですか？', formality: 'Formal' },
+            { id: 22, category: 'Questions', en: 'Where is [X]?', romaji: '[X] wa doko desu ka?', kana: '[X] はどこですか？', formality: 'Formal' },
+            { id: 'q_doko', category: 'Questions', en: 'Where', romaji: 'Doko', kana: 'どこ', formality: 'Both' },
+            { id: 'q_dou', category: 'Questions', en: 'How', romaji: 'Dou', kana: 'どう', formality: 'Both' },
+            { id: 23, category: 'Questions', en: 'What is this?', romaji: 'Kore wa nan desu ka?', kana: 'これは何ですか？ (なんですか)', formality: 'Formal' },
+            { id: 24, category: 'Questions', en: 'How much is this?', romaji: 'Kore wa ikura desu ka?', kana: 'これはいくらですか？', formality: 'Formal' },
+            { id: 25, category: 'Questions', en: 'Is it okay? / Are you okay?', romaji: 'Daijoubu desu ka?', kana: '大丈夫ですか？ (だいじょうぶ)', formality: 'Formal' },
+            { id: 'q_onamae', category: 'Questions', en: 'What is your name?', romaji: 'Onamae wa?', kana: 'お名前は？ (おなまえは)', formality: 'Formal' },
+            { id: 'q_once_more', category: 'Questions', en: 'Once more, please', romaji: 'Mou ichido onegai shimasu', kana: 'もう一度お願いします (もう いちど おねがい します)', formality: 'Formal' },
+            { id: 'q_slowly', category: 'Questions', en: 'Please speak slowly', romaji: 'Yukkuri hanashite kudasai', kana: 'ゆっくり話してください (ゆっくり はなして ください)', formality: 'Formal' },
+            { id: 'q_write_down', category: 'Questions', en: 'Please write it down', romaji: 'Kaite kudasai', kana: '書いてください (かいて ください)', formality: 'Formal' },
+
+            // --- ORDERING & FOOD ---
+            { id: 'f_okimari', category: 'Food & Drink', en: 'Have you decided? (Waiters say this)', romaji: 'Okimari desu ka.', kana: 'お決まりですか。', formality: 'Formal' },
+            { id: 26, category: 'Food & Drink', en: 'This one, please', romaji: 'Kore o kudasai', kana: 'これをください', formality: 'Formal' },
+            { id: 27, category: 'Food & Drink', en: 'Water, please', romaji: 'Omizu o kudasai / onegai shimasu', kana: 'お水をください (おみず)', formality: 'Formal' },
+            { id: 'f_biiru', category: 'Food & Drink', en: 'May I have a beer, please?', romaji: 'Biiru o kudasai.', kana: 'ビールをください。', formality: 'Formal' },
+            { id: 28, category: 'Food & Drink', en: 'Two beers, please', romaji: 'Biiru ni-hai, onegai shimasu', kana: 'ビール二杯、おねがいします', formality: 'Formal' },
+            { id: 'f_tenpura', category: 'Food & Drink', en: 'Can I have the tempura, please?', romaji: 'Tenpura o kudasai.', kana: '天ぷらをください。', formality: 'Formal' },
+            { id: 'f_niku', category: 'Food & Drink', en: 'Do you eat meat?', romaji: 'Niku o tabemasu ka.', kana: '肉を食べますか。 (にく)', formality: 'Formal' },
+            { id: 'f_sakana', category: 'Food & Drink', en: 'I\'ll have the fish. / I eat fish.', romaji: 'Sakana o tabemasu.', kana: '魚を食べます。 (さかな)', formality: 'Formal' },
+            { id: 'f_tamago', category: 'Food & Drink', en: 'I eat eggs.', romaji: 'Tamago o tabemasu.', kana: '卵を食べます。 (たまご)', formality: 'Formal' },
+            { id: 'f_osake', category: 'Food & Drink', en: 'Are you drinking alcohol?', romaji: 'Osake o nomimasu ka.', kana: 'お酒を飲みますか。 (おさけ)', formality: 'Formal' },
+            { id: 29, category: 'Food & Drink', en: 'Delicious!', romaji: 'Oishii!', kana: 'おいしい！', formality: 'Informal' },
+            { id: 30, category: 'Food & Drink', en: 'It was a great meal (Say after eating)', romaji: 'Gochisousama deshita', kana: 'ごちそうさまでした', formality: 'Formal' },
+            { id: 31, category: 'Food & Drink', en: 'What do you recommend?', romaji: 'Osusume wa nan desu ka?', kana: 'おすすめは何ですか？', formality: 'Formal' },
+
+            // --- DIRECTIONS & PLACES ---
+            { id: 32, category: 'Directions', en: 'Train station', romaji: 'Eki', kana: '駅 (えき)', formality: 'Both' },
+            { id: 33, category: 'Directions', en: 'Convenience store', romaji: 'Konbini', kana: 'コンビニ', formality: 'Both' },
+            { id: 34, category: 'Directions', en: 'Go straight', romaji: 'Massugu itte kudasai', kana: 'まっすぐ行ってください', formality: 'Formal' },
+            { id: 35, category: 'Directions', en: 'Right / Left', romaji: 'Migi / Hidari', kana: '右 / 左 (みぎ / ひだり)', formality: 'Both' },
+            { id: 'd_tour', category: 'Directions', en: 'Tour', romaji: 'Tsuaa', kana: 'ツアー', formality: 'Both' },
+            { id: 'd_ticket', category: 'Directions', en: 'Ticket', romaji: 'Chiketto / Kippu', kana: 'チケット / 切符 (きっぷ)', formality: 'Both' },
+
+            // --- SHOPPING ---
+            { id: 's_irasshai', category: 'Shopping', en: 'Welcome (You will hear this in shops)', romaji: 'Irasshaimase', kana: 'いらっしゃいませ', formality: 'Formal' },
+            { id: 's_looking_for', category: 'Shopping', en: 'I am looking for [X]', romaji: '[X] o sagashite imasu', kana: '[X] を探しています (を さがして います)', formality: 'Formal' },
+            { id: 36, category: 'Shopping', en: 'Do you have [X]?', romaji: '[X] wa arimasu ka?', kana: '[X] はありますか？', formality: 'Formal' },
+            { id: 's_try_on', category: 'Shopping', en: 'Can I try this on?', romaji: 'Shichaku shite mo ii desu ka?', kana: '試着してもいいですか？ (しちゃく して も いい です か)', formality: 'Formal' },
+            { id: 's_tax_free', category: 'Shopping', en: 'Is this tax free?', romaji: 'Menzei desu ka?', kana: '免税ですか？ (めんぜい です か)', formality: 'Formal' },
+            { id: 37, category: 'Shopping', en: 'I will take this (buying)', romaji: 'Kore o moraimasu', kana: 'これをもらいます', formality: 'Formal' },
+            { id: 's_irimasen', category: 'Shopping', en: 'I don\'t need it.', romaji: 'Irimasen.', kana: 'いりません。', formality: 'Formal' },
+            { id: 38, category: 'Shopping', en: 'Do you take credit cards?', romaji: 'Kurejitto kaado wa tsukaemasu ka?', kana: 'クレジットカードは使えますか？', formality: 'Formal' }
+        ];
+
+        const categories = [
+            { name: 'Basics', icon: 'fa-thumbs-up' },
+            { name: 'Numbers', icon: 'fa-list-ol' },
+            { name: 'Greetings', icon: 'fa-comment' },
+            { name: 'Introductions', icon: 'fa-info-circle' },
+            { name: 'Questions', icon: 'fa-question-circle' },
+            { name: 'Food & Drink', icon: 'fa-coffee' },
+            { name: 'Directions', icon: 'fa-map-marker-alt' },
+            { name: 'Shopping', icon: 'fa-shopping-bag' },
+        ];
+
+        // --- STATE ---
+        let activeCategory = 'Basics';
+
+        // --- DOM ELEMENTS ---
+        const categoryContainer = document.getElementById('category-container');
+        const phraseListContainer = document.getElementById('phrase-list');
+
+        // --- AUDIO ENGINE ---
+        let audioContext = null;
+
+        function playPCM16(base64, sampleRate) {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            const int16Array = new Int16Array(bytes.buffer);
+            const float32Array = new Float32Array(int16Array.length);
+            for (let i = 0; i < int16Array.length; i++) {
+                float32Array[i] = int16Array[i] / 32768.0;
+            }
+
+            const buffer = audioContext.createBuffer(1, float32Array.length, sampleRate);
+            buffer.getChannelData(0).set(float32Array);
+
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.start();
+        }
+
+        // Secondary TTS fallback for standalone mobile use (when API key is absent/fails)
+        function fallbackTTS(text) {
+            const url = `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=ja&q=${encodeURIComponent(text)}`;
+            const audio = new Audio(url);
+            audio.play();
+        }
+
+        async function speak(text, btnElement) {
+            // UI Loading State
+            const icon = btnElement.querySelector('i');
+            const originalClass = icon.className;
+            icon.className = "fas fa-spinner fa-spin text-xl";
+
+            const cleanText = text.replace(/\[X\]|\[Name\]/g, '').replace(/\([^)]+\)/g, '');
+
+            try {
+                // Environment injected API key
+                const apiKey = ""; 
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: "Read this in Japanese accurately: " + cleanText }] }],
+                    generationConfig: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: {
+                            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } }
+                        }
+                    },
+                    model: "gemini-2.5-flash-preview-tts"
+                };
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    // This catches cases where the user saved the HTML file locally on their phone (missing API key)
+                    console.warn("Primary API failed or is missing key. Using fallback TTS.");
+                    fallbackTTS(cleanText);
+                    return;
+                }
+
+                const data = await response.json();
+                const audioData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+
+                if (audioData) {
+                    const base64 = audioData.data;
+                    const mimeType = audioData.mimeType;
+                    const match = mimeType.match(/rate=(\d+)/);
+                    const sampleRate = match ? parseInt(match[1]) : 24000;
+                    
+                    playPCM16(base64, sampleRate);
+                } else {
+                    fallbackTTS(cleanText);
+                }
+            } catch (error) {
+                console.error("Audio generation failed, using fallback:", error);
+                fallbackTTS(cleanText);
+            } finally {
+                // Restore icon after a short delay so the user feels the click
+                setTimeout(() => { icon.className = originalClass; }, 500);
+            }
+        }
+
+        // --- UI FUNCTIONS ---
+
+        function getFormalityColor(formality) {
+            if (formality === 'Formal') return 'bg-blue-100 text-blue-700';
+            if (formality === 'Informal') return 'bg-orange-100 text-orange-700';
+            return 'bg-slate-100 text-slate-600';
+        }
+
+        function setCategory(name) {
+            activeCategory = name;
+            renderCategories();
+            renderPhrases();
+        }
+
+        function renderCategories() {
+            categoryContainer.innerHTML = '';
+            categories.forEach(cat => {
+                const btn = document.createElement('button');
+                const isActive = activeCategory === cat.name;
+                
+                // Styling base classes vs active classes
+                let className = `flex items-center gap-2 whitespace-nowrap px-4 py-2.5 rounded-full text-sm font-bold transition-all `;
+                if (isActive) {
+                    className += `bg-red-600 text-white shadow-md transform scale-105`;
+                } else {
+                    className += `bg-slate-100 text-slate-500 hover:bg-slate-200`;
+                }
+                
+                btn.className = className;
+                btn.onclick = () => setCategory(cat.name);
+                
+                btn.innerHTML = `<i class="fas ${cat.icon} text-[18px]"></i> ${cat.name}`;
+                categoryContainer.appendChild(btn);
+            });
+        }
+
+        function renderPhrases() {
+            phraseListContainer.innerHTML = '';
+            
+            const filteredPhrases = dictionary.filter(item => item.category === activeCategory);
+            
+            filteredPhrases.forEach(phrase => {
+                const formalityClass = getFormalityColor(phrase.formality);
+                // We use a safe string replacement for the click handler
+                const safeKana = phrase.kana.replace(/'/g, "\\'");
+
+                const cardHTML = `
+                    <div class="bg-white border border-slate-100 shadow-sm rounded-2xl p-5 hover:shadow-md transition-shadow relative overflow-hidden group min-h-[120px]">
+                        <!-- Formality Tag -->
+                        <div class="absolute top-0 right-0 px-3 py-1 rounded-bl-xl text-[10px] font-bold uppercase tracking-wider ${formalityClass}">
+                            ${phrase.formality}
+                        </div>
+
+                        <!-- Text Content -->
+                        <div class="w-full pr-16">
+                            <!-- English -->
+                            <h3 class="text-lg font-bold text-slate-800 leading-tight mb-2 pr-6">
+                                ${phrase.en}
+                            </h3>
+                            
+                            <!-- Romaji -->
+                            <p class="text-red-600 font-semibold mb-1 text-sm">
+                                ${phrase.romaji}
+                            </p>
+                            
+                            <!-- Kana -->
+                            <p class="text-slate-600 text-xl font-medium tracking-wide mt-2">
+                                ${phrase.kana}
+                            </p>
+                        </div>
+                        
+                        <!-- Audio Button -->
+                        <button 
+                            onclick="speak('${safeKana}', this)"
+                            class="absolute bottom-4 right-4 bg-blue-100 hover:bg-blue-200 text-blue-700 p-3 rounded-full transition-colors active:scale-95 shadow-sm z-10 w-12 h-12 flex items-center justify-center"
+                            title="Play pronunciation"
+                            aria-label="Play audio"
+                        >
+                            <i class="fas fa-volume-up text-xl"></i>
+                        </button>
+                    </div>
+                `;
+                phraseListContainer.innerHTML += cardHTML;
+            });
+
+            // Special tip for Introductions
+            if (activeCategory === 'Introductions') {
+                phraseListContainer.innerHTML += `
+                    <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 mt-6">
+                        <h4 class="font-bold text-blue-800 mb-1 flex items-center gap-2">
+                            <i class="fas fa-info-circle"></i> Swiss Tip
+                        </h4>
+                        <p class="text-blue-700 text-sm">
+                            When Japanese people hear you are from Switzerland (Suisu), they will often smile! It is highly regarded in Japan. Remember to bow slightly when saying "Yoroshiku onegaishimasu".
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        // --- INITIAL RENDER ---
+        renderCategories();
+        renderPhrases();
+
+    </script>
+</body>
+</html>
