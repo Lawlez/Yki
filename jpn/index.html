@@ -189,99 +189,46 @@
         const phraseListContainer = document.getElementById('phrase-list');
 
         // --- AUDIO ENGINE ---
-        let audioContext = null;
+        let currentAudio = null;
 
-        function playPCM16(base64, sampleRate) {
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-
-            const binaryString = atob(base64);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-
-            const int16Array = new Int16Array(bytes.buffer);
-            const float32Array = new Float32Array(int16Array.length);
-            for (let i = 0; i < int16Array.length; i++) {
-                float32Array[i] = int16Array[i] / 32768.0;
-            }
-
-            const buffer = audioContext.createBuffer(1, float32Array.length, sampleRate);
-            buffer.getChannelData(0).set(float32Array);
-
-            const source = audioContext.createBufferSource();
-            source.buffer = buffer;
-            source.connect(audioContext.destination);
-            source.start();
-        }
-
-        // Secondary TTS fallback for standalone mobile use (when API key is absent/fails)
-        function fallbackTTS(text) {
-            const url = `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=ja&q=${encodeURIComponent(text)}`;
-            const audio = new Audio(url);
-            audio.play();
-        }
-
-        async function speak(text, btnElement) {
+        function speak(text, btnElement) {
             // UI Loading State
             const icon = btnElement.querySelector('i');
             const originalClass = icon.className;
             icon.className = "fas fa-spinner fa-spin text-xl";
 
+            // Clean text (remove brackets and phonetic guide parentheses)
             const cleanText = text.replace(/\[X\]|\[Name\]/g, '').replace(/\([^)]+\)/g, '');
 
-            try {
-                // Environment injected API key
-                const apiKey = ""; 
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
-
-                const payload = {
-                    contents: [{ parts: [{ text: "Read this in Japanese accurately: " + cleanText }] }],
-                    generationConfig: {
-                        responseModalities: ["AUDIO"],
-                        speechConfig: {
-                            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } }
-                        }
-                    },
-                    model: "gemini-2.5-flash-preview-tts"
-                };
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    // This catches cases where the user saved the HTML file locally on their phone (missing API key)
-                    console.warn("Primary API failed or is missing key. Using fallback TTS.");
-                    fallbackTTS(cleanText);
-                    return;
-                }
-
-                const data = await response.json();
-                const audioData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
-
-                if (audioData) {
-                    const base64 = audioData.data;
-                    const mimeType = audioData.mimeType;
-                    const match = mimeType.match(/rate=(\d+)/);
-                    const sampleRate = match ? parseInt(match[1]) : 24000;
-                    
-                    playPCM16(base64, sampleRate);
-                } else {
-                    fallbackTTS(cleanText);
-                }
-            } catch (error) {
-                console.error("Audio generation failed, using fallback:", error);
-                fallbackTTS(cleanText);
-            } finally {
-                // Restore icon after a short delay so the user feels the click
-                setTimeout(() => { icon.className = originalClass; }, 500);
+            // Stop any currently playing audio
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
             }
+
+            // Use the FREE Google Translate endpoint (No API Key needed!)
+            const url = `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=ja&q=${encodeURIComponent(cleanText)}`;
+            currentAudio = new Audio(url);
+
+            // Event listeners to handle the icon animations
+            currentAudio.onplay = () => {
+                icon.className = "fas fa-volume-up text-xl text-blue-500"; // Playing state
+            };
+
+            currentAudio.onended = () => {
+                icon.className = originalClass; // Restore original icon
+            };
+
+            currentAudio.onerror = () => {
+                icon.className = originalClass;
+                alert("Could not play audio. Please check your internet connection.");
+            };
+
+            // Play the audio
+            currentAudio.play().catch(error => {
+                console.error("Audio playback failed:", error);
+                icon.className = originalClass;
+            });
         }
 
         // --- UI FUNCTIONS ---
